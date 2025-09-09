@@ -1,0 +1,10 @@
+pandas
+matplotlib
+seaborn
+scikit-learn
+jinja2
+calmap
+xgboost
+pyyaml
+python-box
+joblib
