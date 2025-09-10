@@ -1,0 +1,65 @@
+# --- 1. 全局与路径设置 ---
+# 提交时修改为 /app/input/
+base_data_dir: '/app/input/'
+model_save_dir: 'saved_models'
+experiment_name: 'xgboost_baseline'
+
+# --- 2. 数据加载设置 ---
+data_loader:
+  trade_data:
+    brent:
+      path: '赛题数据发布/赛道一/交易数据/赛道一_Brent交易数据.csv'
+      code: 'B.IPE'
+    sc:
+      path: '赛题数据发布/赛道一/交易数据/赛道一_SC交易数据.csv'
+      code: 'SC.INE'
+    wti:
+      path: '赛题数据发布/赛道一/交易数据/赛道一_WTI交易数据.csv'
+      code: 'CL.NYM'
+  fundamental_data_paths:
+    - '赛题数据发布/赛道一/基本面数据/基本面数据_供应.csv'
+    - '赛题数据发布/赛道一/基本面数据/基本面数据_宏观.csv'
+    - '赛题数据发布/赛道一/基本面数据/基本面数据_基金持仓.csv'
+    - '赛题数据发布/赛道一/基本面数据/基本面数据_库存.csv'
+    - '赛题数据发布/赛道一/基本面数据/基本面数据_利润.csv'
+    - '赛题数据发布/赛道一/基本面数据/基本面数据_需求.csv'
+
+# --- 3. 特征工程与预处理 ---
+# 定义要执行的预处理步骤及其顺序
+preprocessing_pipeline:
+  - name: 'fill_miss_value'
+    # params: {} # 如果需要参数，可以在这里添加
+  - name: 'frequency_encode_non_numeric'
+    # params: {}
+
+# --- 4. 数据集构建 ---
+dataset:
+  train_val_test_split: 'time_series_cv' # 'time_series_cv' 'holdout'
+  history_window: 20
+  future_steps: [5, 10, 20]
+  target_columns: ['brent_收盘价', 'sc_收盘价', 'wti_收盘价']
+  test_split_ratio: 0.2
+  time_series_cv_chunk_size: 21 # 244 is the number of trading days in 2019, 21 is about one month
+
+# --- 5. 模型训练 ---
+model:
+  type: 'xgboost' # 将来可以支持 'lightgbm', 'catboost' 等
+  params:
+    n_estimators: 1000
+    max_depth: 8
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    objective: 'reg:squarederror'
+    eval_metric: 'rmse'
+    seed: 42
+    n_jobs: -1
+    tree_method: 'hist' # 使用CPU时，可改为 'auto' 或注释掉 device
+    device: 'cuda'
+
+# --- 6. 评估 ---
+evaluation:
+  weights:
+    t5: 0.333333
+    t10: 0.333333
+    t20: 0.333333
