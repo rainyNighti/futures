@@ -25,11 +25,8 @@ class Predictor:
         """
         all_predictions = []
         num_models = len(self.models)
-        dtest = xgb.DMatrix(X_test)
-        
         for i, model in enumerate(self.models):
             logging.info(f"使用模型 {i+1}/{num_models} 进行预测...")
-            y_pred_col = model.predict(dtest)
+            y_pred_col = model.predict(X_test)
             all_predictions.append(y_pred_col)
-            
         return np.column_stack(all_predictions)

@@ -3,6 +3,7 @@ import argparse
 import logging
 from pprint import pformat
 
+from src.utils import set_random_seed
 from src.utils.config import load_config
 from src.data.data_loader import assemble_data
 from src.features.preprocessing import execute_preprocessing_pipeline
@@ -10,14 +11,23 @@ from src.data.dataset import create_and_split_supervised_dataset
 from src.modeling.trainer import ModelTrainer
 from src.modeling.predictor import Predictor
 from src.evaluation.evaluator import Evaluator
+import os
+import random
+import numpy as np
+
 
 # 设置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def main(config_path: str):  
+    import debugpy;debugpy.listen(("localhost", 5678));print("Waiting for debugger attach...");debugpy.wait_for_client()
+
     # 1. 加载配置
     logging.info(f"--- [1/6] 加载配置 from {config_path} ---")
     cfg = load_config(config_path)
+
+    # 设置随机种子
+    set_random_seed(cfg.get("seed", 42))
     logging.info(f"配置加载成功: \n{pformat(cfg)}")
 
     # 2. 数据加载与整合
