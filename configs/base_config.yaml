@@ -34,7 +34,7 @@ preprocessing_pipeline:
 
 # --- 4. 数据集构建 ---
 dataset:
-  train_val_test_split: 'holdout' # 'time_series_cv' 'holdout'
+  train_val_test_split: 'time_series_cv' # 'time_series_cv' 'holdout'
   history_window: 20
   future_steps: [5, 10, 20]
   target_columns: ['brent_收盘价', 'sc_收盘价', 'wti_收盘价']
