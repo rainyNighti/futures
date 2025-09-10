@@ -76,3 +76,42 @@ def create_and_split_supervised_dataset(
         return X_train, y_train, X_test, y_test
     else:
         raise ValueError(f"Unknown split strategy: {split_strategy}")
+
+
+
+def create_predict_dataset(
+    df: pd.DataFrame,
+    history_window: int,
+    future_steps: List[int],
+    target_columns: List[str]
+) -> Tuple[np.ndarray, np.ndarray]:
+    """创建预测数据集和日期列表"""
+    X = []
+    DATE = []
+    end_index = len(df)
+    
+    for i in range(history_window, end_index):
+        start_window = i - history_window
+        end_window = i
+        window_data = df.iloc[start_window:end_window]
+        history_data = window_data.values
+        date = window_data.index[-1]
+        # history_data = df.iloc[start_window:end_window].values
+        X.append(history_data.flatten())
+        DATE.append(date)
+        
+        
+    return np.array(X), DATE
+
+
+def generate_predict_dataset(
+    df: pd.DataFrame, 
+    dataset_config: dict
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    X, DATE = create_predict_dataset(
+        df,
+        history_window=dataset_config.history_window,
+        future_steps=dataset_config.future_steps,
+        target_columns=dataset_config.target_columns
+    )
+    return X, DATE
