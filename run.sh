@@ -1,5 +1,3 @@
-python run.py --config configs/base_config.yaml \
-    --extra_params dataset.target_columns=['brent_收盘价'] \
-    --debug
+python prediction.py --config configs/predict_config.yaml --input_path /app/input/ --output_path /app/output/
 
-python run.py --config configs/base_config.yaml --extra_params dataset.target_columns=['brent_收盘价'] --debug
+echo "Execution finished."

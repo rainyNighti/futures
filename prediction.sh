@@ -1,0 +1,1 @@
+python prediction.py --config configs/base_config.yaml --input_path data/ --output_path ./
