@@ -1,3 +1,10 @@
+# 比赛信息
+中国石化第一节人工智能创新大赛
+
+赛题7： 国内能源化工品种期货价格预测
+
+[比赛赛题链接](https://aicup.sinopec.com/competition/SINOPEC-07/)
+
 # 环境
 ```
 conda create -n futures python=3.10
