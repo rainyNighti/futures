@@ -1,6 +1,6 @@
 # --- 1. 全局与路径设置 ---
 # 提交时修改为 /app/input/
-base_data_dir: '/high_perf_store3/data-lm/xiezixun/futures_predict/data/'
+base_data_dir: 'data/'
 model_save_dir: 'saved_models'
 experiment_name: 'xgboost_baseline'
 
