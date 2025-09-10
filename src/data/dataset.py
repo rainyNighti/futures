@@ -39,9 +39,40 @@ def create_and_split_supervised_dataset(
         future_steps=dataset_config.future_steps,
         target_columns=dataset_config.target_columns
     )
-    
-    split_index = int(len(X) * (1 - dataset_config.test_split_ratio))
-    X_train, y_train = X[:split_index], y[:split_index]
-    X_test, y_test = X[split_index:], y[split_index:]
 
-    return X_train, y_train, X_test, y_test
+    split_strategy = getattr(dataset_config, 'train_val_test_split', 'holdout')
+    test_split_ratio = getattr(dataset_config, 'test_split_ratio', 0.2)
+
+    if split_strategy == 'time_series_cv':
+        # 时间序列交叉验证，返回最后一个分割（可根据需要扩展返回所有分割）
+        chunk_size = getattr(dataset_config, 'time_series_cv_chunk_size', 244)
+        n_samples = len(X)
+        x_trains, y_trains, x_tests, y_tests = [], [], [], []
+        start = 0
+        while start <= n_samples:
+            split_start = start
+            split_end = min(start + chunk_size, n_samples)
+            n_split = split_end - split_start
+            train_end = split_start + int(n_split * (1 - test_split_ratio))
+            test_end = split_end
+            X_train, y_train = X[start:train_end], y[start:train_end]
+            X_test, y_test = X[train_end:test_end], y[train_end:test_end]
+            x_trains.append(X_train)
+            y_trains.append(y_train)
+            x_tests.append(X_test)
+            y_tests.append(y_test)
+            start += chunk_size
+        # concatenate all splits
+        X_train = np.concatenate(x_trains, axis=0)
+        y_train = np.concatenate(y_trains, axis=0)
+        X_test = np.concatenate(x_tests, axis=0)
+        y_test = np.concatenate(y_tests, axis=0)
+        return X_train, y_train, X_test, y_test
+
+    elif split_strategy == 'holdout':
+        split_index = int(len(X) * (1 - getattr(dataset_config, 'test_split_ratio', 0.2)))
+        X_train, y_train = X[:split_index], y[:split_index]
+        X_test, y_test = X[split_index:], y[split_index:]
+        return X_train, y_train, X_test, y_test
+    else:
+        raise ValueError(f"Unknown split strategy: {split_strategy}")

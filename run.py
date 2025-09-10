@@ -19,12 +19,13 @@ import numpy as np
 # 设置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def main(config_path: str):  
-    import debugpy;debugpy.listen(("localhost", 5678));print("Waiting for debugger attach...");debugpy.wait_for_client()
+def main(config_path: str, debug: bool, extra_params: str):  
+    if debug:
+        import debugpy;debugpy.listen(("localhost", 5678));print("Waiting for debugger attach...");debugpy.wait_for_client()
 
     # 1. 加载配置
     logging.info(f"--- [1/6] 加载配置 from {config_path} ---")
-    cfg = load_config(config_path)
+    cfg = load_config(config_path, extra_params)
 
     # 设置随机种子
     set_random_seed(cfg.get("seed", 42))
@@ -81,5 +82,7 @@ if __name__ == '__main__':
         default='configs/base_config.yaml', 
         help='配置文件路径'
     )
+    parser.add_argument('--debug', action='store_true', help='启用调试模式')
+    parser.add_argument('--extra_params', type=str, help='额外的配置参数，格式为key1=value1,key2=value2')
     args = parser.parse_args()
-    main(args.config)
+    main(args.config, args.debug, args.extra_params)
