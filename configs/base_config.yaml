@@ -34,12 +34,11 @@ preprocessing_pipeline:
 
 # --- 4. 数据集构建 ---
 dataset:
-  train_val_test_split: 'time_series_cv' # 'time_series_cv' 'holdout'
+  train_val_test_split: 'holdout' # 'time_series_cv' 'holdout'
   history_window: 20
   future_steps: [5, 10, 20]
-  target_columns: ['brent_收盘价', 'sc_收盘价', 'wti_收盘价']
+  target_column: '主力合约_收盘价'
   test_split_ratio: 0.2
-  time_series_cv_chunk_size: 21 # 244 is the number of trading days in 2019, 21 is about one month
 
 # --- 5. 模型训练 ---
 model:

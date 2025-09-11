@@ -6,7 +6,7 @@ def create_supervised_dataset(
     df: pd.DataFrame,
     history_window: int,
     future_steps: List[int],
-    target_columns: List[str]
+    target_column: List[str]
 ) -> Tuple[np.ndarray, np.ndarray]:
     """将时间序列DataFrame转换为监督学习的(X, y)格式。"""
     X, y = [], []
@@ -20,7 +20,7 @@ def create_supervised_dataset(
         
         current_y = []
         for step in future_steps:
-            future_data = df[target_columns].iloc[i + step - 1].values
+            future_data = df[[target_column]].iloc[i + step - 1].values
             current_y.extend(future_data)
         y.append(current_y)
         
@@ -28,7 +28,8 @@ def create_supervised_dataset(
 
 def create_and_split_supervised_dataset(
     df: pd.DataFrame, 
-    dataset_config: dict
+    dataset_config: dict,
+    product_name: str = None
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     封装了数据集创建和划分的完整流程，参数由配置驱动。
@@ -37,7 +38,7 @@ def create_and_split_supervised_dataset(
         df,
         history_window=dataset_config.history_window,
         future_steps=dataset_config.future_steps,
-        target_columns=dataset_config.target_columns
+        target_column=product_name + "_" + dataset_config.target_column
     )
 
     split_strategy = getattr(dataset_config, 'train_val_test_split', 'holdout')

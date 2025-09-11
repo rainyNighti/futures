@@ -27,74 +27,44 @@ def preprocess_trade_data(file_path: str, product_code: str, product_name: str) 
 
     # 获取所有唯一的证券代码
     unique_codes = df['证券代码'].unique()
+    unique_codes.sort()
+    main_code = unique_codes[0]
+    spot_code = unique_codes[1]
+    monthly_codes = unique_codes[2:]
 
     # 初始化一个空的 DataFrame
     combined_df = pd.DataFrame(index=df.index.unique())
 
-    # 遍历每个证券代码，将其数据添加为新列
-    for code in unique_codes:
-        code_df = df[df['证券代码'] == code].copy()
-        columns_to_keep = ['开盘价', '最高价', '最低价', '收盘价', '结算价', '成交量', '持仓量']
-        code_df = code_df[columns_to_keep]
-        code_df = code_df.add_prefix(f'{product_name}_')
-        if code != product_code:
-            # 如果不是主力合约，重命名列以区分
-            code_df = code_df.add_prefix(f'{code}_')
-        combined_df = combined_df.join(code_df, how='outer')
+    # 计算每一天的次大和第三大月度合约（按成交量排序）
+    # 只考虑monthly_codes
+    columns_to_keep = ['开盘价', '最高价', '最低价', '收盘价', '结算价', '成交量', '持仓量']
+    for date, group in df.groupby(df.index):
+        # 主力合约
+        main_group = group[group['证券代码'] == main_code]
+        if not main_group.empty:
+            main_row = main_group.iloc[0]
+            for col in columns_to_keep:
+                combined_df.at[date, f'{product_name}_主力合约_{col}'] = main_row[col]
 
-    # 生成新字段
-    # 期限结构: 近远月价差、价差斜率
-    if product_code in unique_codes:
-        main_contract = df[df['证券代码'] == product_code]
-        for code in unique_codes:
-            if code != product_code:
-                other_contract = df[df['证券代码'] == code]
-                spread = main_contract['收盘价'] - other_contract['收盘价']
-                combined_df[f'{product_name}_{code}_价差'] = spread
-                combined_df[f'{product_name}_{code}_价差斜率'] = spread.diff()
-
-    # 波动性: 日内波动率、价差波动率
-    for code in unique_codes:
-        code_df = df[df['证券代码'] == code]
-        intraday_volatility = (code_df['最高价'] - code_df['最低价']) / code_df['收盘价']
-        combined_df[f'{product_name}_{code}_日内波动率'] = intraday_volatility
-
-    # 资金情绪: 持仓量变化
-    for code in unique_codes:
-        code_df = df[df['证券代码'] == code]
-        open_interest_change = code_df['持仓量'].diff()
-        combined_df[f'{product_name}_{code}_持仓量变化'] = open_interest_change
-
-    # 相对动量: 合约相对强度
-    for code in unique_codes:
-        code_df = df[df['证券代码'] == code]
-        relative_strength = code_df['收盘价'] / code_df['收盘价'].rolling(window=5).mean()
-        combined_df[f'{product_name}_{code}_相对强度'] = relative_strength
-
-    # 结算特性: 收盘结算偏离度
-    for code in unique_codes:
-        code_df = df[df['证券代码'] == code]
-        settlement_deviation = (code_df['收盘价'] - code_df['结算价']) / code_df['结算价']
-        combined_df[f'{product_name}_{code}_收盘结算偏离度'] = settlement_deviation
-
-    # 换月特征: 新老主力价差
-    if product_code in unique_codes:
-        main_contract = df[df['证券代码'] == product_code]
-        for code in unique_codes:
-            if code != product_code:
-                other_contract = df[df['证券代码'] == code]
-                rollover_spread = main_contract['收盘价'] - other_contract['收盘价']
-                combined_df[f'{product_name}_{code}_换月价差'] = rollover_spread
-
-    # 市场宽度: 上涨合约占比
-    daily_up_count = df.groupby(df.index)['收盘价'].apply(lambda x: (x.diff() > 0).sum())
-    total_count = df.groupby(df.index)['收盘价'].count()
-    market_breadth = daily_up_count / total_count
-    combined_df[f'{product_name}_市场宽度'] = market_breadth
+        # 只取月度合约
+        monthly_group = group[group['证券代码'].isin(monthly_codes)]
+        if len(monthly_group) < 2:
+            continue  # 没有足够的月度合约
+        # 按成交量降序排序
+        sorted_monthly = monthly_group.sort_values('成交量', ascending=False)
+        # 取次大和第三大合约
+        if len(sorted_monthly) >= 2:
+            second_row = sorted_monthly.iloc[1]
+            for col in columns_to_keep:
+                combined_df.at[date, f'{product_name}_次大合约_{col}'] = second_row[col]
+        if len(sorted_monthly) >= 3:
+            third_row = sorted_monthly.iloc[2]
+            for col in columns_to_keep:
+                combined_df.at[date, f'{product_name}_第三大合约_{col}'] = third_row[col]
 
     return combined_df
 
-def assemble_data(base_data_dir: str, trade_data_config: Dict, fundamental_paths: List[str]) -> pd.DataFrame:
+def assemble_data(base_data_dir: str, trade_data_config: Dict, fundamental_paths: List[str], product_name: str) -> pd.DataFrame:
     """
     根据配置加载、预处理并合并所有数据源。
 
@@ -106,12 +76,9 @@ def assemble_data(base_data_dir: str, trade_data_config: Dict, fundamental_paths
     Returns:
         pd.DataFrame: 合并并初步处理后的DataFrame.
     """
-    trade_dfs = []
-    for name, config in trade_data_config.items():
-        full_path = os.path.join(base_data_dir, config['path'])
-        trade_dfs.append(preprocess_trade_data(full_path, config['code'], name))
-    
-    merged_trade_df = pd.concat(trade_dfs, axis=1)
+    config = trade_data_config[product_name]
+    full_path = os.path.join(base_data_dir, config['path'])
+    trade_dfs = preprocess_trade_data(full_path, config['code'], product_name)
 
     fundamental_dfs = []
     for rel_path in fundamental_paths:
@@ -120,13 +87,13 @@ def assemble_data(base_data_dir: str, trade_data_config: Dict, fundamental_paths
 
     merged_fundamental_df = pd.concat(fundamental_dfs, axis=1)
     
-    combined_df = merged_trade_df.join(merged_fundamental_df, how='outer')
+    combined_df = trade_dfs.join(merged_fundamental_df, how='outer')
     combined_df = combined_df.sort_index()  # 按日期排序，确保前向填充的正确性
 
     ffill_cols = merged_fundamental_df.columns  # 仅对fundamental数据执行前向填充
     combined_df[ffill_cols] = combined_df[ffill_cols].ffill()
     
     # 只保留原始的交易日
-    final_df = combined_df.loc[merged_trade_df.index].copy()
+    final_df = combined_df.loc[trade_dfs.index].copy()
     
     return final_df
