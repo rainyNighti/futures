@@ -23,5 +23,7 @@ pip install uv
 uv pip install -r requirements.txt --system
 python run.py
 
+# 拷贝/app/output/output.csv到宿主机
+docker cp <docker-id>:/app/output/output.csv ./output.csv
 # 打包docker容器为镜像
 docker commit <docker-id> fpp:latest

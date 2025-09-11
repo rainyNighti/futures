@@ -79,8 +79,12 @@ def main(config_path: str, debug: bool):
                 }
                 prediction_results.append(row)
 
-    # 将结果列表转换为DataFrame并保存结果
+    # 将结果列表转换为DataFrame
     results_df = pd.DataFrame(prediction_results)
+    # 1. 日期格式化为YYYY-MM-DD
+    results_df['date'] = pd.to_datetime(results_df['date']).dt.strftime('%Y-%m-%d')
+    # 2. 排序：先按date，再按target_horizon，再按product_code
+    results_df = results_df.sort_values(by=['date', 'target_horizon', 'product_code']).reset_index(drop=True)
     output_dir = args.output_path
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, 'output.csv') 
