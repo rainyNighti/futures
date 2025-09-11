@@ -8,6 +8,9 @@ apt install git libgomp1 vim -y
 ssh-keygen -t rsa -C "347073775@qq.com"
 cat /root/.ssh/id_rsa.pub
 git clone git@github.com:rainyNighti/futures.git
+cd futures
+git pull
+cd ..
 cp -r futures/* .
 cp inference.py run.py
 pip install uv

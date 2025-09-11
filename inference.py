@@ -51,7 +51,7 @@ def main(config_path: str, debug: bool):
 
         # 4. 预测数据集生成
         logging.info("--- [4/6] 开始构建预测数据集 ---")
-        X_pred, DATE = generate_predict_dataset(df, cfg.dataset, product_name=product_name)
+        X_pred, DATE = generate_predict_dataset(df, cfg.dataset)
         logging.info(f"X_pred: {X_pred.shape}")
         
         # 5. 模型推理
