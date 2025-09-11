@@ -108,6 +108,7 @@ def main(config_path: str, debug: bool, extra_params: str):
             writer.writerow(row)
     logging.info(f"评测结果已保存至: {results_path}")
     logging.info("--- 程序执行完毕 ---")
+    logging.info(f"FinalAverageScore: {results['Overall']['Final_Score']:.6f}")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="运行机器学习训练流程")

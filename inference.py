@@ -18,13 +18,13 @@ import pandas as pd
 
 # 设置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-def main(config_path: str, debug: bool, extra_params: str):  
+def main(config_path: str, debug: bool):  
     if debug:
         import debugpy;debugpy.listen(("localhost", 5678));print("Waiting for debugger attach...");debugpy.wait_for_client()
 
     # 1. 加载配置
     logging.info(f"--- [1/6] 加载配置 from {config_path} ---")
-    cfg = load_config(config_path, extra_params)
+    cfg = load_config(config_path)
     cfg.base_data_dir = f"{args.input_path}/"
 
     # 设置随机种子
@@ -93,17 +93,11 @@ def main(config_path: str, debug: bool, extra_params: str):
 
         
 if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser(description="运行机器学习训练流程")
-    parser.add_argument(
-        '--config', 
-        type=str, 
-        default='configs/predict_config.yaml', 
-        help='配置文件路径'
-    )
-    parser.add_argument('--debug', action='store_true', help='启用调试模式')
-    parser.add_argument('--input_path', type=str, required=True, help='Path to the input data')
-    parser.add_argument('--output_path', type=str, required=True, help='Path to save the prediction results')
-    parser.add_argument('--extra_params', type=str, help='额外的配置参数，格式为key1=value1,key2=value2')
-    args = parser.parse_args()
-    main(args.config, args.debug, args.extra_params)
+    # 固定参数，直接写死
+    class Args:
+        config = '/configs/predict_config.yaml'
+        debug = False
+        input_path = '/app/input/data/赛题数据发布/赛道一' 
+        output_path = '/app/output'
+    args = Args()
+    main(args.config, args.debug)
