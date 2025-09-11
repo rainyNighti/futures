@@ -91,7 +91,9 @@ def main(config_path: str, debug: bool):
     output_dir = args.output_path
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, 'output.csv') 
-    results_df.to_csv(output_path, index=False, encoding='utf-8')
+    print(results_df['date'].head())  # 检查格式化后的日期格式
+    print(results_df['date'].dtype)   # 检查数据类型
+    results_df.to_csv(output_path, index=False, encoding='utf-8', date_format='%Y-%m-%d')
 
     logging.info(f"预测结果已保存至: {output_path}")
 
