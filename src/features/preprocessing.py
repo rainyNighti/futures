@@ -92,8 +92,9 @@ def add_volume_direction(df: pd.DataFrame, product_name: str) -> pd.DataFrame:
     if close_spread not in df.columns:
         df = add_close_spread(df, product_name)
     spread_change = df[close_spread].diff()
+    # 1: 主力放量且价差扩大，-1: 次主力放量且价差缩小, 0: 其他情况
     df[f"{product_name}_放量方向"] = df.apply(
-        lambda row: '主力' if (row[main_vol] > row[sub_vol] and row[close_spread] > 0) else ('次主力' if (row[main_vol] < row[sub_vol] and row[close_spread] < 0) else '无'), axis=1)
+        lambda row: 1 if (row[main_vol] > row[sub_vol] and row[close_spread] > 0) else (-1 if (row[main_vol] < row[sub_vol] and row[close_spread] < 0) else 0), axis=1)
     return df
 
 # 3. 持仓量类属性
