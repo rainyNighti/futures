@@ -34,6 +34,8 @@ def main(config_path: str, debug: bool):
     # 2. 数据加载与整合、特征工程、预测、保存结果，遍历每个品种
     logging.info("--- [2/6] 开始数据加载与整合 ---")
     prediction_results = []
+    # 品种名映射表
+    product_code_map = {'sc': 'SC', 'brent': 'Brent', 'wti': 'WTI'}
     for product_name in cfg.data_loader.trade_data.keys():
         logging.info(f"处理品种: {product_name}")
         df = assemble_data(
@@ -73,7 +75,7 @@ def main(config_path: str, debug: bool):
                 predicted_price = y_pred[idx, pred_idx] if y_pred.ndim > 1 else y_pred[idx]
                 row = {
                     'date': date,
-                    'product_code': product_name,
+                    'product_code': product_code_map.get(product_name.lower(), product_name),
                     'target_horizon': f"T+{step}",
                     'predicted_price': predicted_price
                 }
@@ -91,8 +93,6 @@ def main(config_path: str, debug: bool):
     output_dir = args.output_path
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, 'output.csv') 
-    print(results_df['date'].head())  # 检查格式化后的日期格式
-    print(results_df['date'].dtype)   # 检查数据类型
     results_df.to_csv(output_path, index=False, encoding='utf-8', date_format='%Y-%m-%d')
 
     logging.info(f"预测结果已保存至: {output_path}")
