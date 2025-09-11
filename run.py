@@ -141,37 +141,6 @@ def main(config_path: str, debug: bool, extra_params: str):
         for row in rows:
             writer.writerow(row)
     logging.info(f"评测结果已保存至: {results_path}")
-    # 添加一个overall的平均分
-    overall_scores = {}
-    for metric in results[next(iter(results))].keys():
-        overall_scores[metric] = np.mean([results[prod][metric] for prod in results.keys()])
-    results['Overall'] = overall_scores
-    # 打印表格格式并保存为csv
-    header = ["Metric"] + list(results.keys())
-    rows = []
-    metrics = list(next(iter(results.values())).keys())
-    for metric in metrics:
-        row = [metric] + [f"{results[prod][metric]:.6f}" for prod in results.keys()]
-        rows.append(row)
-    # 打印表格
-    col_widths = [max(len(str(item)) for item in col) for col in zip(*([header] + rows))]
-    format_str = " | ".join(f"{{:<{w}}}" for w in col_widths)
-    separator = "-+-".join('-' * w for w in col_widths)
-    print(format_str.format(*header))
-    print(separator)
-    for row in rows:
-        print(format_str.format(*row))
-    # 保存为csv（逗号分隔）
-    results_dir = os.path.join(cfg.model_save_dir, cfg.experiment_name)
-    os.makedirs(results_dir, exist_ok=True)
-    results_path = os.path.join(results_dir, 'evaluation_results.csv')
-    import csv
-    with open(results_path, 'w', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
-        for row in rows:
-            writer.writerow(row)
-    logging.info(f"评测结果已保存至: {results_path}")
     logging.info("--- 程序执行完毕 ---")
 
 if __name__ == '__main__':
