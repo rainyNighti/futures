@@ -47,7 +47,7 @@ def main(config_path: str, debug: bool, extra_params: str):
 
         # 3. 特征工程
         logging.info("--- [3/6] 开始执行特征工程流程 ---")
-        df = execute_preprocessing_pipeline(df, cfg.preprocessing_pipeline)
+        df = execute_preprocessing_pipeline(df, cfg.preprocessing_pipeline, product_name=product_name)
         logging.info(f"特征工程完成, shape: {df.shape}")
 
         # 4. 数据集构建与划分
