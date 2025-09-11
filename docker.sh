@@ -16,9 +16,12 @@ cd ..
 cp -r futures/* .
 cp inference.py run.py
 
-mkdir inference
-unzip inference.zip -d inference
+mkdir -p saved_models/inference
+unzip inference.zip -d saved_models/inference
 
 pip install uv
 uv pip install -r requirements.txt --system
 python run.py
+
+# 打包docker容器为镜像
+docker commit <docker-id> fpp:latest

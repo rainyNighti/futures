@@ -31,6 +31,7 @@ preprocessing_pipeline:
     # params: {} # 如果需要参数，可以在这里添加
   - name: 'frequency_encode_non_numeric'
     # params: {}
+  - name: 'add_close_spread'
 
 # --- 4. 数据集构建 ---
 dataset:
