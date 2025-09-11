@@ -17,25 +17,29 @@ class ModelTrainer:
         else:
             raise ValueError(f"不支持的模型类型: {self.model_config.type}")
 
-    def train(self, X_train, y_train):
+    def train(self, X_train, y_train, val_size: float = 0.1, random_state: int = 42):
         """
-        为y的每一列训练一个模型。
+        为y的每一列训练一个模型，支持早停机制。
         """
+        from sklearn.model_selection import train_test_split
         num_targets = y_train.shape[1]
         
         for i in range(num_targets):
             logging.info(f"正在训练目标 {i+1}/{num_targets} ...")
-            
             y_target = y_train[:, i]
+            # 划分训练集和验证集
+            X_tr, X_val, y_tr, y_val = train_test_split(
+                X_train, y_target, test_size=val_size, random_state=random_state
+            )
             model = self._get_model()
-            
-            # TODO: 实现早停机制需要从X_train中划分验证集
-            model.fit(X_train, y_target, verbose=False)
-            
+            # 训练时使用早停机制
+            model.fit(
+                X_tr, y_tr,
+                eval_set=[(X_val, y_val)],
+                verbose=False
+            )
             model_path = os.path.join(self.model_dir, f'model_target_{i}.joblib')
             joblib.dump(model, model_path)
             logging.info(f"模型已保存至: {model_path}")
-            
             self.models.append(model)
-        
         return self.models
