@@ -83,8 +83,6 @@ def create_and_split_supervised_dataset(
 def create_predict_dataset(
     df: pd.DataFrame,
     history_window: int,
-    future_steps: List[int],
-    target_columns: List[str]
 ) -> Tuple[np.ndarray, np.ndarray]:
     """创建预测数据集和日期列表"""
     X = []
@@ -112,7 +110,5 @@ def generate_predict_dataset(
     X, DATE = create_predict_dataset(
         df,
         history_window=dataset_config.history_window,
-        future_steps=dataset_config.future_steps,
-        target_columns=dataset_config.target_columns
     )
     return X, DATE

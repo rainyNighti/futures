@@ -2,7 +2,7 @@
 # 提交时修改为 /app/input/
 base_data_dir: 'data/'
 model_save_dir: 'saved_models'
-experiment_name: 'xgboost_baseline'
+experiment_name: 'inference'
 
 # --- 2. 数据加载设置 ---
 data_loader:
@@ -31,62 +31,32 @@ preprocessing_pipeline:
     # params: {} # 如果需要参数，可以在这里添加
   - name: 'frequency_encode_non_numeric'
     # params: {}
+  - name: 'add_close_spread'
 
 # --- 4. 数据集构建 ---
 dataset:
   train_val_test_split: 'holdout' # 'time_series_cv' 'holdout'
-  history_window: 25
+  history_window: 20
   future_steps: [5, 10, 20]
   target_column: '主力合约_收盘价'
   test_split_ratio: 0.2
 
 # --- 5. 模型训练 ---
 model:
-  # type: 'xgboost' # 将来可以支持 'lightgbm', 'catboost' 等
-  # params:
-  #   n_estimators: 1000
-  #   max_depth: 8
-  #   learning_rate: 0.05
-  #   subsample: 0.8
-  #   colsample_bytree: 0.8
-  #   objective: 'reg:squarederror'
-  #   eval_metric: 'rmse'
-  #   seed: 42
-  #   n_jobs: -1
-  #   tree_method: 'hist' # 使用CPU时，可改为 'auto' 或注释掉 device
-  #   device: 'cuda'
-  # type: 'catboost'
-  # params:
-  #   iterations: 1000
-  #   learning_rate: 0.05
-  #   depth: 8
-  #   l2_leaf_reg: 3
-  #   random_seed: 42
-  #   loss_function: 'RMSE'
-  #   eval_metric: 'RMSE'
-  #   early_stopping_rounds: 100
-  #   verbose: 100
-  #   task_type: 'GPU'
-  #   devices: 'cuda'
-  # type: 'lightgbm'
-  # params:
-  #   n_estimators: 1000
-  #   max_depth: 8
-  #   learning_rate: 0.05
-  #   subsample: 0.8          # same as bagging_fraction
-  #   colsample_bytree: 0.8
-  #   objective: 'regression'
-  #   metric: 'rmse'
-  #   random_state: 42
-  #   n_jobs: -1
-  #   device: 'gpu'           # or 'cpu'
-  #   boosting_type: 'gbdt'   # standard boosting
-  type: 'adaboost'
+  type: 'xgboost' # 将来可以支持 'lightgbm', 'catboost' 等
   params:
-    n_estimators: 1000       # match boosting iterations
-    learning_rate: 0.05      # comparable to XGB/LGB/CatBoost
-    loss: 'linear'           # regression loss (options: 'linear', 'square', 'exponential')
-    random_state: 42
+    n_estimators: 1000
+    max_depth: 8
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    objective: 'reg:squarederror'
+    eval_metric: 'rmse'
+    seed: 42
+    n_jobs: -1
+    tree_method: 'hist' # 使用CPU时，可改为 'auto' 或注释掉 device
+    device: 'cuda'
+
 # --- 6. 评估 ---
 evaluation:
   weights:

@@ -8,3 +8,5 @@ xgboost==3.0.5
 PyYAML==6.0.2
 python-box==7.3.2
 joblib==1.5.2
+catboost==1.2.8
+lightgbm==4.6.0
