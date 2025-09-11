@@ -31,54 +31,52 @@ def main(config_path: str, debug: bool):
     set_random_seed(cfg.get("seed", 42))
     logging.info(f"配置加载成功: \n{pformat(cfg)}")
 
-    # 2. 数据加载与整合
+    # 2. 数据加载与整合、特征工程、预测、保存结果，遍历每个品种
     logging.info("--- [2/6] 开始数据加载与整合 ---")
-    df = assemble_data(
-        base_data_dir=cfg.base_data_dir,
-        trade_data_config=cfg.data_loader.trade_data,
-        fundamental_paths=cfg.data_loader.fundamental_data_paths
-    )
-    logging.info(f"数据整合完成, shape: {df.shape}")
-
-    # 3. 特征工程
-    logging.info("--- [3/6] 开始执行特征工程流程 ---")
-    df = execute_preprocessing_pipeline(df, cfg.preprocessing_pipeline)
-    logging.info(f"特征工程完成, shape: {df.shape}")
-
-    # 4. 预测数据集生成
-    logging.info("--- [4/6] 开始构建预测数据集 ---")
-    X_pred, DATE = generate_predict_dataset(df, cfg.dataset)
-    logging.info(f"X_pred: {X_pred.shape}")
-    
-    # 5. 模型推理
-    model_dir = os.path.join(cfg.model_save_dir, cfg.experiment_name)
-
-    logging.info("--- 开始推理 ---")
-    predictor = Predictor(model_dir=model_dir)
-    y_pred = predictor.predict(X_pred)
-    logging.info(f"推理完成, y_pred shape: {y_pred.shape}")
-
-    # 6. 结果保存
     prediction_results = []
-    for idx in range(y_pred.shape[0]):
-        date = DATE[idx]
-        target_company = ["Brent", "SC", "WTI"]
-        future_steps = [5, 10, 20]
-        for i, step in enumerate(future_steps):
-            for j, name in enumerate(target_company):
-                # 计算预测值在y_pred中的索引位置
-                pred_idx = 3 * i + j
-                
-                # 获取预测价格
-                predicted_price = y_pred[idx, pred_idx]
-                # 创建当前行的数据字典
+    for product_name in cfg.data_loader.trade_data.keys():
+        logging.info(f"处理品种: {product_name}")
+        df = assemble_data(
+            base_data_dir=cfg.base_data_dir,
+            trade_data_config=cfg.data_loader.trade_data,
+            fundamental_paths=cfg.data_loader.fundamental_data_paths,
+            product_name=product_name
+        )
+        logging.info(f"数据整合完成, shape: {df.shape}")
+
+        # 3. 特征工程
+        logging.info("--- [3/6] 开始执行特征工程流程 ---")
+        df = execute_preprocessing_pipeline(df, cfg.preprocessing_pipeline, product_name=product_name)
+        logging.info(f"特征工程完成, shape: {df.shape}")
+
+        # 4. 预测数据集生成
+        logging.info("--- [4/6] 开始构建预测数据集 ---")
+        X_pred, DATE = generate_predict_dataset(df, cfg.dataset, product_name=product_name)
+        logging.info(f"X_pred: {X_pred.shape}")
+        
+        # 5. 模型推理
+        model_dir = os.path.join(cfg.model_save_dir, cfg.experiment_name, product_name)
+
+        logging.info("--- 开始推理 ---")
+        predictor = Predictor(model_dir=model_dir)
+        y_pred = predictor.predict(X_pred)
+        logging.info(f"推理完成, y_pred shape: {y_pred.shape}")
+
+        # 6. 结果保存
+        for idx in range(y_pred.shape[0]):
+            date = DATE[idx]
+            # 这里假设每个品种只输出自己的预测结果
+            future_steps = [5, 10, 20]
+            for i, step in enumerate(future_steps):
+                # 预测值索引
+                pred_idx = i
+                predicted_price = y_pred[idx, pred_idx] if y_pred.ndim > 1 else y_pred[idx]
                 row = {
                     'date': date,
-                    'product_code': name,
+                    'product_code': product_name,
                     'target_horizon': f"T+{step}",
                     'predicted_price': predicted_price
                 }
-                # 添加到结果列表
                 prediction_results.append(row)
 
     # 将结果列表转换为DataFrame并保存结果
