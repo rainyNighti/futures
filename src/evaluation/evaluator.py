@@ -5,7 +5,7 @@ class Evaluator:
     def __init__(self, eval_config: dict, dataset_config: dict):
         self.weights = eval_config.weights
         self.future_steps = dataset_config.future_steps
-        self.num_target_vars = len(dataset_config.target_columns)
+        self.num_target_vars = 1
 
     def _calculate_pps(self, y_true: np.ndarray, y_pred: np.ndarray) -> float:
         """计算价格精准度 (Price Proximity Score, PPS)"""
