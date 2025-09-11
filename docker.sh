@@ -9,7 +9,7 @@ ssh-keygen -t rsa -C "347073775@qq.com"
 cat /root/.ssh/id_rsa.pub
 git clone git@github.com:rainyNighti/futures.git
 cp -r futures/* .
+cp inference.py run.py
 pip install uv
 uv pip install -r requirements.txt --system
-mv inference.py run.py
 python run.py

@@ -95,7 +95,7 @@ if __name__ == '__main__':
     class Args:
         config = '/configs/predict_config.yaml'
         debug = False
-        input_path = '/app/input/data/赛题数据发布/赛道一' 
+        input_path = '/app/input/data/' 
         output_path = '/app/output'
     args = Args()
     main(args.config, args.debug)
