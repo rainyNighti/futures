@@ -63,30 +63,7 @@ def main(config_path: str, debug: bool, extra_params: str):
         trainer = ModelTrainer(model_config=cfg.model, model_dir=model_dir)
         trainer.train(X_train, y_train)
         logging.info("模型训练完成。")
-        # 4. 数据集构建与划分
-        logging.info("--- [4/6] 开始构建监督学习数据集 ---")
-        X_train, y_train, X_test, y_test = create_and_split_supervised_dataset(df, cfg.dataset, product_name=product_name)
-        logging.info(f"X_train: {X_train.shape}, y_train: {y_train.shape}")
-        logging.info(f"X_test: {X_test.shape}, y_test: {y_test.shape}")
-        
-        # 5. 模型训练与推理
-        model_dir = os.path.join(cfg.model_save_dir, cfg.experiment_name, product_name)
-        
-        logging.info(f"--- [5/6] 开始模型训练，模型将保存在: {model_dir} ---")
-        trainer = ModelTrainer(model_config=cfg.model, model_dir=model_dir)
-        trainer.train(X_train, y_train)
-        logging.info("模型训练完成。")
 
-        logging.info("--- 开始推理 ---")
-        predictor = Predictor(model_dir=model_dir)
-        y_pred = predictor.predict(X_test)
-        logging.info(f"推理完成, y_pred shape: {y_pred.shape}")
-        
-        # 6. 性能评估
-        logging.info("--- [6/6] 开始性能评估 ---")
-        evaluator = Evaluator(cfg.evaluation, cfg.dataset)
-        scores = evaluator.calculate_final_score(y_test, y_pred)
-        results[product_name] = scores
         logging.info("--- 开始推理 ---")
         predictor = Predictor(model_dir=model_dir)
         y_pred = predictor.predict(X_test)
@@ -131,7 +108,6 @@ def main(config_path: str, debug: bool, extra_params: str):
             writer.writerow(row)
     logging.info(f"评测结果已保存至: {results_path}")
     logging.info("--- 程序执行完毕 ---")
-    logging.info(f"FinalAverageScore: {results['Overall']['Final_Score']:.6f}")
     logging.info(f"FinalAverageScore: {results['Overall']['Final_Score']:.6f}")
 
 if __name__ == '__main__':
