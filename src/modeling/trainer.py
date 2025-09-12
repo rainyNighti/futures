@@ -1,4 +1,8 @@
 import xgboost as xgb
+import catboost as cb
+import lightgbm as lgb
+from sklearn.ensemble import AdaBoostRegressor
+from sklearn.tree import DecisionTreeRegressor
 import joblib
 import os
 import logging
@@ -13,6 +17,19 @@ class ModelTrainer:
     def _get_model(self):
         if self.model_config.type == 'xgboost':
             return xgb.XGBRegressor(**self.model_config.params)
+        elif self.model_config.type == 'catboost':
+            return cb.CatBoostRegressor(**self.model_config.params)
+        elif self.model_config.type == 'lightgbm':
+            return lgb.LGBMRegressor(**self.model_config.params)
+        elif self.model_config.type == 'adaboost':
+            estimator = DecisionTreeRegressor(max_depth=self.model_config.params.get('max_depth', 8))
+            return AdaBoostRegressor(
+                estimator=estimator,
+                n_estimators=self.model_config.params.get('n_estimators', 1000),
+                learning_rate=self.model_config.params.get('learning_rate', 0.05),
+                loss=self.model_config.params.get('loss', 'linear'),
+                random_state=self.model_config.params.get('random_state', 42)
+            )
         else:
             raise ValueError(f"不支持的模型类型: {self.model_config.type}")
 
