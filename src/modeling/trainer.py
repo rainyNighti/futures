@@ -43,10 +43,12 @@ class ModelTrainer:
         )
         model = self._get_model()
         # 训练时使用早停机制
+        kwargs = {
+            'eval_set': [(X_val, y_val)],
+            'verbose': False
+        } if isinstance(model, (xgb.XGBRegressor, cb.CatBoostRegressor, lgb.LGBMRegressor)) else {} # adaBoost不支持早停和verbose
         model.fit(
-            X_tr, y_tr,
-            eval_set=[(X_val, y_val)],
-            verbose=False
+            X_tr, y_tr,**kwargs
         )
         joblib.dump(model, self.save_model_path)
         logging.info(f"模型已保存至: {self.save_model_path}")

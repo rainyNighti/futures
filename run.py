@@ -82,7 +82,7 @@ def main(config_path: str, debug: bool, extra_params: str):
         total_score = 0
         for product_name, product_score in results.items():
             total_score += product_score[target_column]
-        results['overall'][target_column] = total_score / len(results.keys())
+        results['overall'][target_column] = total_score / 3
     final_score = np.mean([v for k, v in results['overall'].items()])   # 我们不设置权重了，final score就是三家产品平均值的平均值
     print_pretty_results(results, final_score)
 
