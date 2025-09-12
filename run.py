@@ -67,7 +67,7 @@ def main(config_path: str, debug: bool, extra_params: str):
             # 5 模型训练
             save_model_path = os.path.join(cfg.model_save_dir, cfg.experiment_name, product_name, f'{target_column}.joblib')
             trainer = ModelTrainer(model_config=cfg.model, save_model_path=save_model_path)
-            trainer.train(X_train, y_train)
+            trainer.train(X_train, y_train, random_state=cfg.get("seed", 42))
 
             # 6 模型推理
             predictor = Predictor(save_model_path)
