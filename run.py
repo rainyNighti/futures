@@ -1,5 +1,6 @@
 from math import pi
 import os
+import pandas as pd
 import argparse
 import logging
 from pprint import pformat
@@ -45,19 +46,26 @@ def main(config_path: str, debug: bool, extra_params: str):
     results = defaultdict(lambda: defaultdict(float))
     for product_name, product_path in tqdm(cfg.data_loader.trade_data.items(), desc='逐个处理交易所'):
         for target_column in cfg.data_loader.target_columns:    # 逐个y处理数据，训练模型
-            # 1 加载所有csv数据
-            dfs = load_data(
-                base_data_dir=cfg.base_data_dir,
-                trade_data_path=product_path,
-                fundamental_paths=cfg.data_loader.fundamental_data_paths
-            )
+            os.makedirs('cache', exist_ok=True)
+            cache_file = f"cache/{product_name}_{target_column}.pkl"
+            if os.path.exists(cache_file):
+                logging.info(f"跳过 {product_name} 的 {target_column}，缓存文件已存在: {cache_file}")
+                df = pd.read_pickle(cache_file)
+            else:
+                # 1 加载所有csv数据
+                dfs = load_data(
+                    base_data_dir=cfg.base_data_dir,
+                    trade_data_path=product_path,
+                    fundamental_paths=cfg.data_loader.fundamental_data_paths
+                )
 
-            # 2 数据清洗
-            dfs = clean_data(dfs)
+                # 2 数据清洗
+                dfs = clean_data(dfs)
 
-            # 3 特征工程
-            pipeline_config = update_pipeline_config(cfg[f"{product_name}_{target_column}_pipeline"], target_column)
-            df = execute_preprocessing_pipeline(dfs, pipeline_config, target_column)
+                # 3 特征工程
+                pipeline_config = update_pipeline_config(cfg[f"{product_name}_{target_column}_pipeline"], target_column)
+                df = execute_preprocessing_pipeline(dfs, pipeline_config, target_column)
+                df.to_pickle(cache_file)  # 缓存处理后的数据，避免重复计算
 
             # 4 数据集划分
             X_train, X_test, y_train, y_test = split_dataset(df, cfg.test_split_ratio, target_column)
