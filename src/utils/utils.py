@@ -71,6 +71,48 @@ def print_pretty_results(results: Dict[str, Dict[str, float]], final_score: floa
     logging.info(f"{final_score_text:>{len(header)}}") # 右对齐
     logging.info(separator + "\n")
 
+def write_score_to_csv(results: Dict[str, Dict[str, float]], final_score: float, save_dir: str):
+    """
+    将评测结果写入CSV文件，方便后续分析和记录。
+
+    Args:
+        results (Dict[str, Dict[str, float]]): 包含评测结果的嵌套字典。
+                                                 结构: {product_name: {target_column: score}}
+                                                 应包含一个特殊的 'overall' 键。
+        final_score (float): 最终的综合平均分。
+        save_dir (str): 用于保存CSV文件的目录路径。
+    """
+    import csv
+    os.makedirs(save_dir, exist_ok=True)
+    csv_file_path = os.path.join(save_dir, "evaluation_results.csv")
+
+    if 'overall' not in results:
+        logging.error("错误：结果字典中未找到 'overall' 项。")
+        return
+
+    target_columns = list(results['overall'].keys())
+    product_names = sorted([p for p in results.keys() if p != 'overall'])
+
+    with open(csv_file_path, mode='w', newline='', encoding='utf-8') as csvfile:
+        writer = csv.writer(csvfile)
+        
+        # 写入表头
+        header = ['产品名称'] + target_columns + ['average']
+        writer.writerow(header)
+
+        # 写入每个产品的分数
+        for product in product_names:
+            row = [product] + [f"{results[product].get(col, 0.0):.6f}" for col in target_columns]
+            row = row + [f"{np.mean([float(x) for x in row[1:]]):.6f}"]  # 计算该行的平均分
+            writer.writerow(row)
+
+        # 写入 Overall 平均分
+        overall_row = ['Overall 平均分'] + [f"{results['overall'].get(col, 0.0):.6f}" for col in target_columns]
+        overall_row = overall_row + [f"{final_score:.6f}"]  # 最后一列是 final_score
+        writer.writerow(overall_row)
+
+    logging.info(f"评测结果已保存至: {csv_file_path}")
+
 def set_random_seed(seed=32):
     """
     设置所有相关库的随机数种子，以确保实验的可复现性。

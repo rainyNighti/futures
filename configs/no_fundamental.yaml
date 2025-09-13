@@ -3,44 +3,41 @@ target_columns: &target_columns
   - 'T_5'
   - 'T_10'
   - 'T_20'
-  
-# 是否强制重新处理数据（忽略缓存）
-force_reprocess: false
 
 # 定义要执行的预处理步骤及其顺序
 base_preprocessing_pipeline: &base_preprocessing_pipeline
   trade_pipeline:
     - type: 'aggregate_major_contracts' # 函数名
     - type: 'add_historical_features' 
-      n_lags_d: 20  # 使用历史20天的数据
+      n_lags_d: -1  # 使用历史20天的数据
     - type: 'create_target_feature'
       source_column: '收盘价_主力合约'
 
   # 约定fundamental的第0个函数为：合并函数
   supply_pipeline:
-    - n_lags_m: 12  # 使用历史12个月的数据
-      n_lags_w: 20  # 使用历史20周
+    - n_lags_m: -1  # 使用历史12个月的数据
+      n_lags_w: -1  # 使用历史20周
 
   macro_pipeline:
-    - n_lags_m: 12
-      n_lags_y: 3   # 使用历史3年
-      n_lags_q: 4   # 使用历史4个季度
+    - n_lags_m: -1
+      n_lags_y: -1   # 使用历史3年
+      n_lags_q: -1   # 使用历史4个季度
 
   fund_holding_pipeline:
-    - n_lags_w: 20
+    - n_lags_w: -1
 
   inventory_pipeline:
-    - n_lags_w: 20
-      n_lags_q: 4
-      n_lags_d: 20  # 使用历史20天
+    - n_lags_w: -1
+      n_lags_q: -1
+      n_lags_d: -1  # 使用历史20天
 
   profit_pipeline:
-    - n_lags_w: 20
-      n_lags_m: 12
+    - n_lags_w: -1
+      n_lags_m: -1
   
   demand_pipeline:
-    - n_lags_w: 20
-      n_lags_m: 12
+    - n_lags_w: -1
+      n_lags_m: -1
 
   global_pipeline:
     # 1 魔法列处理
@@ -50,6 +47,32 @@ base_preprocessing_pipeline: &base_preprocessing_pipeline
     - type: "drop_all_nan_rows_and_y_nan_rows"   # 删除全是NaN的行，以及y是nan的行
     - type: "fill_with_stat"
       method: "mean"
+
+use_fields:
+  - '开盘价_主力合约'
+  - '收盘价_主力合约'
+  - '结算价_主力合约'
+  - '持仓量_主力合约'
+  - '成交量_主力合约'
+  - '最高价_主力合约'
+  - '最低价_主力合约'
+  - '开盘价_次大合约'
+  - '收盘价_次大合约'
+  - '结算价_次大合约'
+  - '持仓量_次大合约'
+  - '成交量_次大合约'
+  - '最高价_次大合约'
+  - '最低价_次大合约'
+  - '开盘价_第三大合约'
+  - '收盘价_第三大合约'
+  - '结算价_第三大合约'
+  - '持仓量_第三大合约'
+  - '成交量_第三大合约'
+  - '最高价_第三大合约'
+  - '最低价_第三大合约'
+  - 'year'
+  - 'month'
+  - 'day'
 
 # --- 1. 全局与路径设置 ---
 # 提交时修改为 /app/input/

@@ -46,8 +46,9 @@ def add_param(config: Box, key_route: str, value):
                     d[k] = {}
             d = d[k]
     last_k = keys[-1]
-    if isinstance(d, list) and last_k.isdigit():
+    if isinstance(d, list) and last_k.replace('-','').isdigit():
         last_k = int(last_k)
+        last_k = min(last_k, len(d))
         while len(d) <= last_k:
             d.append(None)
         d[last_k] = convert_str_to_types(value)
@@ -87,8 +88,7 @@ def load_config(file_path: str, extra_params: str = None) -> Box:
         for param in non_base_configs:
             try:
                 key, value = param.split('=')
-                if key.startswith(other_pipeline_config_name):
-                    add_param(config_dict, key, value)
+                add_param(config_dict, key, value)
             except ValueError:
                 print(f"Warning: Unable to parse extra param '{param}'. Expected format 'key=value', also make sure the key route exists.")
                 continue

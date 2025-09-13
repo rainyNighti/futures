@@ -39,8 +39,9 @@ def _process_data(
     """
     processed_df = df.copy()
     for params in pipeline_config:
-        type = params.pop('type')
-        processed_df = processing_functions[type](processed_df, **params)
+        _type = params.pop('type', None)
+        if _type:
+            processed_df = processing_functions[_type](processed_df, **params)
     return processed_df
 
 def _process_fundamental_data(
