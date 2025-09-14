@@ -7,7 +7,7 @@ def convert_str_to_types(value: str):
         return int(value)
     try:
         float_value = float(value)
-        if '.' in value:
+        if '.' in value or 'e' in value.lower():
             return float_value
         return int(float_value)
     except ValueError:
