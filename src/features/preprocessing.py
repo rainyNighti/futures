@@ -40,6 +40,8 @@ def _process_data(
     """
     processed_df = df.copy()
     for type, params in pipeline_config.items():
+        if type == 'update_used_fields':
+            print('hhh')
         processed_df = processing_functions[type](processed_df, **params)
     return processed_df
 

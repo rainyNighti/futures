@@ -163,13 +163,21 @@ def find_optimal_features_rfe(X, y, features, n_to_test):
 
 # --- 7. 主流程执行 ---
 if __name__ == '__main__':
+    init_columns = []
+    init_columns.extend(['close_rolling_mean_5', 'close_rolling_std_5', 'close_rolling_max_5', 'close_rolling_min_5', 'close_rolling_skew_5', 'close_rolling_kurt_5', 'close_rolling_mean_10', 'close_rolling_std_10', 'close_rolling_max_10', 'close_rolling_min_10', 'close_rolling_skew_10', 'close_rolling_kurt_10', 'close_rolling_mean_20', 'close_rolling_std_20', 'close_rolling_max_20', 'close_rolling_min_20', 'close_rolling_skew_20', 'close_rolling_kurt_20', 'close_rolling_mean_40', 'close_rolling_std_40', 'close_rolling_max_40', 'close_rolling_min_40', 'close_rolling_skew_40', 'close_rolling_kurt_40', 'close_rolling_mean_60', 'close_rolling_std_60', 'close_rolling_max_60', 'close_rolling_min_60', 'close_rolling_skew_60', 'close_rolling_kurt_60'])
+    init_columns.extend(['momentum_1', 'roc_1', 'momentum_2', 'roc_2', 'momentum_3', 'roc_3', 'momentum_5', 'roc_5', 'momentum_10', 'roc_10', 'momentum_20', 'roc_20'])
+    init_columns.extend(['rsi_14', 'rsi_20', 'rsi_30'])
+    init_columns.extend(['bb_width_30', 'bb_width_20', 'bb_percent_b_20', 'bb_percent_b_30'])
+    init_columns.extend(['spread_close_main_vs_sub', 'ratio_close_main_vs_sub', 'spread_close_sub_vs_third', 'ratio_close_sub_vs_third', 'ratio_volume_main_vs_sub', 'ratio_volume_main_vs_total', 'ratio_oi_main_vs_sub', 'ratio_oi_main_vs_total'])
+
+
     for pkl_path in ['cache_feature_engineering/sc.pkl', 'cache_feature_engineering/brent.pkl', 'cache_feature_engineering/wti.pkl']:
         for target_column in ['T_5', 'T_10', 'T_20']:
             log.info(f"当前处理{pkl_path}, {target_column}")
             # --- 1. 数据准备 ---
             df = pd.read_pickle(pkl_path)
             y = df[target_column]
-            X = df.drop(columns=['T_5', 'T_10', 'T_20'])
+            X = df.drop(columns=['T_5', 'T_10', 'T_20'])[init_columns]
 
             # --- 2. 划分训练集和最终测试集 ---
             # 严格按时间划分，最后的20%作为从未见过的测试集

@@ -18,11 +18,18 @@ preprocess_config:
 base_global_pipeline: &base_global_pipeline
   # 魔法列处理
   add_date_info: {}
-  add_volume_change: {}
-        
+  
   # 缺失值处理
   handle_missing_values_for_oil_data: {}
-    
+
+  # 需要填补完缺失值再计算
+  add_volume_change: {}
+  generate_rolling_stats_features: {}
+  generate_momentum_features: {}
+  generate_rsi_features: {}
+  generate_bollinger_bands_features: {}
+  generate_contract_spread_features: {}
+
 # --- 1. 全局与路径设置 ---
 # 提交时修改为 /app/input/
 base_data_dir: 'data/'
@@ -67,7 +74,6 @@ brent_T_5_pipeline:
       - '最低价_第三大合约'
       - 'day'
       - 'month'
-
       - '欧元区:HICP(调和CPI):当月同比_M_lag_1'
       - '原油：常减压：独立炼厂：产能利用率：中国（周）_W_lag_8'
 
@@ -93,10 +99,12 @@ brent_T_10_pipeline:
       - '最低价_第三大合约'
       - 'day'
       - 'month'
-
       - '欧元区:HICP(调和CPI):当月同比_M_lag_1'
       - 'OPEC：原油：产量：阿联酋（月）_M_lag_4'
       - '中国:制造业PMI_M_lag_4'
+
+      - 'spread_close_sub_vs_third'
+      - 'close_rolling_std_20'
 
 ## brent T_20
 brent_T_20_pipeline:
@@ -120,12 +128,12 @@ brent_T_20_pipeline:
       - '最低价_第三大合约'
       - 'day'
       - 'month'
-
       - '欧元区:HICP(调和CPI):当月同比_M_lag_1'
       - 'EIA：燃料油渣油：库存（周）_W_lag_8'
-
       - '主力成交量变化'
       - '次主力成交量变化'
+
+      - 'close_rolling_std_40'
 
 ## sc T_5
 sc_T_5_pipeline:
@@ -149,16 +157,16 @@ sc_T_5_pipeline:
       - '最低价_第三大合约'
       - 'day'
       - 'month'
-
       - 'OPEC：原油：产量：伊朗（月）_M_lag_2'
       - '中国:房地产开发投资完成额:累计同比_M_lag_4'
       - '中国:PPI:全部工业品:当月同比_M_lag_1'
       - '汽油：商业库存：中国（周）_W_lag_7'
       - 'ICE:IPE:期货持仓数量:生产商/贸易商/加工商/用户空头持仓:原油_W_lag_7'
       - '柴油：裂解：价差：中国：主营销售公司（日）_D_lag_33'
-
       - '主力成交量变化'
       - '次主力成交量变化'
+
+      - 'ratio_close_sub_vs_third'
 
 ## sc T_10
 sc_T_10_pipeline:
@@ -182,8 +190,9 @@ sc_T_10_pipeline:
       - '最低价_第三大合约'
       - 'day'
       - 'month'
-
       - '中国:房地产开发投资完成额:累计同比_M_lag_1'
+
+      - 'close_rolling_skew_60'
 
 ## sc T_20
 sc_T_20_pipeline:
@@ -207,10 +216,12 @@ sc_T_20_pipeline:
       - '最低价_第三大合约'
       - 'day'
       - 'month'
-
       - '美国:CPI:同比_M_lag_1'
       - 'OPEC：原油：产量：伊朗（月）_M_lag_4'
       - '中国:M2:同比_M_lag_1'
+
+      - 'close_rolling_std_40'
+      - 'bb_width_20'
 
 ## wti T_5
 wti_T_5_pipeline:
@@ -235,9 +246,12 @@ wti_T_5_pipeline:
       - 'day'
       - 'month'
       - '欧元区:HICP(调和CPI):当月同比_M_lag_1'
-
       - '主力成交量变化'
       - '次主力成交量变化'
+
+      - 'close_rolling_min_5'
+      - 'spread_close_sub_vs_third'
+      - 'ratio_close_sub_vs_third'
 
 ## wti T_10
 wti_T_10_pipeline:
@@ -262,6 +276,8 @@ wti_T_10_pipeline:
       - 'day'
       - 'month'
       - '欧元区:HICP(调和CPI):当月同比_M_lag_1'
+
+      - 'close_rolling_min_10'
 
 
 ## wti T_20

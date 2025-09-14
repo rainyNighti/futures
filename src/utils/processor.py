@@ -172,3 +172,10 @@ def merge_with_lags_multi_freq(base_df: pd.DataFrame,
     final_df = pd.concat([base_df, new_features_df], axis=1)
 
     return final_df
+
+def get_lag_cols(base_col_name: str, max_lag: int) -> list:
+    """
+    根据基础列名和最大lag天数，生成一个包含所有lag列名的列表。
+    列表将从lag_1排到max_lag。
+    """
+    return [f"{base_col_name}_lag_{i}" for i in range(1, max_lag + 1)]
