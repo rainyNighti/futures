@@ -1,26 +1,27 @@
+from math import pi
 import os
+import pandas as pd
 import argparse
 import logging
 from pprint import pformat
+from collections import defaultdict
 
-from src.utils import set_random_seed
+from src.utils.utils import set_random_seed, print_pretty_results, write_score_to_csv
 from src.utils.config import load_config
-from src.data.data_loader import assemble_data
-from src.features.preprocessing import execute_preprocessing_pipeline
-from src.data.dataset import generate_predict_dataset
+from src.data.data_loader import load_data
+from src.data.data_clean import clean_data
+from src.features.preprocessing import feature_engineering_pipeline, preprocess_data
+from src.data.dataset import split_dataset
 from src.modeling.trainer import ModelTrainer
 from src.modeling.predictor import Predictor
-from src.evaluation.evaluator import Evaluator
+from src.evaluation.evaluator import calculate_pps
 import os
-import random
-import numpy as np
-import pandas as pd
+from copy import deepcopy
+
 
 # 设置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 def main(config_path: str, debug: bool):  
-    if debug:
-        import debugpy;debugpy.listen(("localhost", 5678));print("Waiting for debugger attach...");debugpy.wait_for_client()
 
     # 1. 加载配置
     logging.info(f"--- [1/6] 加载配置 from {config_path} ---")
@@ -36,48 +37,53 @@ def main(config_path: str, debug: bool):
     prediction_results = []
     # 品种名映射表
     product_code_map = {'sc': 'SC', 'brent': 'Brent', 'wti': 'WTI'}
-    for product_name in cfg.data_loader.trade_data.keys():
-        logging.info(f"处理品种: {product_name}")
-        df = assemble_data(
+    for product_name, product_path in cfg.data_loader.trade_data.items():
+        # logging.info(f"处理品种: {product_name}")
+        dfs = load_data(
             base_data_dir=cfg.base_data_dir,
-            trade_data_config=cfg.data_loader.trade_data,
-            fundamental_paths=cfg.data_loader.fundamental_data_paths,
-            product_name=product_name
+            trade_data_path=str(product_path),
+            fundamental_paths=cfg.data_loader.fundamental_data_paths
         )
+        dfs = clean_data(dfs)
+        df = preprocess_data(dfs, cfg.preprocess_config)
         logging.info(f"数据整合完成, shape: {df.shape}")
+        # df.to_csv('1.csv')
+        # df = pd.read_csv("1.csv")
+        # df['日期'] = pd.to_datetime(df['日期'])
+        # df.set_index('日期', inplace=True)
 
-        # 3. 特征工程
-        logging.info("--- [3/6] 开始执行特征工程流程 ---")
-        df = execute_preprocessing_pipeline(df, cfg.preprocessing_pipeline, product_name=product_name)
-        logging.info(f"特征工程完成, shape: {df.shape}")
+        for target_column in cfg.data_loader.target_columns:
+            copy_df = df.copy()
+            # 特征工程
+            copy_df = feature_engineering_pipeline(copy_df, cfg[f"{product_name}_{target_column}_pipeline"])
 
-        # 4. 预测数据集生成
-        logging.info("--- [4/6] 开始构建预测数据集 ---")
-        X_pred, DATE = generate_predict_dataset(df, cfg.dataset)
-        logging.info(f"X_pred: {X_pred.shape}")
-        
-        # 5. 模型推理
-        model_dir = os.path.join(cfg.model_save_dir, cfg.experiment_name, product_name)
+            # 数据划分
+            copy_df = copy_df.dropna(subset=[target_column])
+            drop_cols = [x for x in ['T_5', 'T_10', 'T_20'] if x in copy_df.columns]
+            X = copy_df.drop(columns=drop_cols)
 
-        logging.info("--- 开始推理 ---")
-        predictor = Predictor(model_dir=model_dir)
-        y_pred = predictor.predict(X_pred)
-        logging.info(f"推理完成, y_pred shape: {y_pred.shape}")
+            logging.info("--- [4/6] 开始构建预测数据集 ---")
+            DATE = X.index
+            X_pred = X.values
+            logging.info(f"X_pred: {X_pred.shape}")
+            
+            # 5. 模型推理
+            save_model_path = os.path.join(cfg.model_save_dir, cfg.experiment_name, product_name,  f'{target_column}.joblib')
 
-        # 6. 结果保存
-        for idx in range(y_pred.shape[0]):
-            date = DATE[idx]
-            # 这里假设每个品种只输出自己的预测结果
-            future_steps = [5, 10, 20]
-            for i, step in enumerate(future_steps):
-                # 预测值索引
-                pred_idx = i
-                predicted_price = y_pred[idx, pred_idx] if y_pred.ndim > 1 else y_pred[idx]
+            logging.info("--- 开始推理 ---")
+            predictor = Predictor(save_model_path=save_model_path)
+            y_pred = predictor.predict(X_pred)
+            logging.info(f"推理完成, y_pred shape: {y_pred.shape}")
+
+            # 6. 结果保存
+            for idx in range(y_pred.shape[0]):
+                date = DATE[idx]
+                # 这里假设每个品种只输出自己的预测结果
                 row = {
                     'date': date,
                     'product_code': product_code_map.get(product_name.lower(), product_name),
-                    'target_horizon': f"T+{step}",
-                    'predicted_price': predicted_price
+                    'target_horizon': target_column,
+                    'predicted_price': y_pred[idx]
                 }
                 prediction_results.append(row)
 
@@ -104,7 +110,7 @@ if __name__ == '__main__':
     class Args:
         config = '/configs/predict_config.yaml'
         debug = False
-        input_path = '/app/input/data/' 
-        output_path = '/app/output'
+        input_path = '/app/input/' 
+        output_path = '/app/output/'
     args = Args()
     main(args.config, args.debug)

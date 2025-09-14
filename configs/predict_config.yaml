@@ -1,65 +1,331 @@
+# --- 0. 变量定义区 ---
+target_columns: &target_columns
+  - 'T_5'
+  - 'T_10'
+  - 'T_20'
+  
+# 是否强制重新处理数据（忽略缓存）
+force_reprocess: false
+
+# 定义要执行的预处理步骤及其顺序
+preprocess_config:
+  trade:
+    aggregate_major_contracts: {}
+    add_historical_features: {}
+    create_target_feature:    # 函数名
+      source_column: '收盘价_主力合约'  # 参数
+      
+base_global_pipeline: &base_global_pipeline
+  # 魔法列处理
+  add_date_info: {}
+  
+  # 缺失值处理
+  handle_missing_values_for_oil_data: {}
+
+  # 需要填补完缺失值再计算
+  add_volume_change: {}
+  generate_rolling_stats_features: {}
+  generate_momentum_features: {}
+  generate_rsi_features: {}
+  generate_bollinger_bands_features: {}
+  generate_contract_spread_features: {}
+
 # --- 1. 全局与路径设置 ---
 # 提交时修改为 /app/input/
 base_data_dir: 'data/'
 model_save_dir: 'saved_models'
-experiment_name: 'inference'
+experiment_name: 'final_submission'
 
 # --- 2. 数据加载设置 ---
 data_loader:
   trade_data:
-    brent:
-      path: '赛题数据发布/赛道一/交易数据/赛道一_Brent交易数据.csv'
-      code: 'B.IPE'
-    sc:
-      path: '赛题数据发布/赛道一/交易数据/赛道一_SC交易数据.csv'
-      code: 'SC.INE'
-    wti:
-      path: '赛题数据发布/赛道一/交易数据/赛道一_WTI交易数据.csv'
-      code: 'CL.NYM'
+    brent: '赛道一_Brent交易数据.csv'
+    sc: '赛道一_SC交易数据.csv'
+    wti: '赛道一_WTI交易数据.csv'
+  target_columns: *target_columns
   fundamental_data_paths:
-    - '赛题数据发布/赛道一/基本面数据/基本面数据_供应.csv'
-    - '赛题数据发布/赛道一/基本面数据/基本面数据_宏观.csv'
-    - '赛题数据发布/赛道一/基本面数据/基本面数据_基金持仓.csv'
-    - '赛题数据发布/赛道一/基本面数据/基本面数据_库存.csv'
-    - '赛题数据发布/赛道一/基本面数据/基本面数据_利润.csv'
-    - '赛题数据发布/赛道一/基本面数据/基本面数据_需求.csv'
+    - '基本面数据_供应.csv'
+    - '基本面数据_宏观.csv'
+    - '基本面数据_基金持仓.csv'
+    - '基本面数据_库存.csv'
+    - '基本面数据_利润.csv'
+    - '基本面数据_需求.csv'
 
 # --- 3. 特征工程与预处理 ---
-# 定义要执行的预处理步骤及其顺序
-preprocessing_pipeline:
-  - name: 'fill_miss_value'
-    # params: {} # 如果需要参数，可以在这里添加
-  - name: 'frequency_encode_non_numeric'
-    # params: {}
-  - name: 'add_close_spread'
+## brent T_5
+brent_T_5_pipeline:
+  <<: *base_global_pipeline
+  update_used_fields:
+    use_fields:
+      - 'T_5'
+      - 'T_10'
+      - 'T_20'
+      - '收盘价_主力合约'
+      - '结算价_主力合约'
+      - '持仓量_主力合约'
+      - '成交量_主力合约'
+      - '最高价_主力合约'
+      - '持仓量_次大合约'
+      - '成交量_次大合约'
+      - '最高价_次大合约'
+      - '收盘价_第三大合约'
+      - '成交量_第三大合约'
+      - '最高价_第三大合约'
+      - '最低价_第三大合约'
+      - 'day'
+      - 'month'
+      - '欧元区:HICP(调和CPI):当月同比_M_lag_1'
+      - '原油：常减压：独立炼厂：产能利用率：中国（周）_W_lag_8'
 
-# --- 4. 数据集构建 ---
-dataset:
-  train_val_test_split: 'holdout' # 'time_series_cv' 'holdout'
-  history_window: 20
-  future_steps: [5, 10, 20]
-  target_column: '主力合约_收盘价'
-  test_split_ratio: 0.2
+## brent T_10
+brent_T_10_pipeline:
+  <<: *base_global_pipeline
+  update_used_fields:
+    use_fields:
+      - 'T_5'
+      - 'T_10'
+      - 'T_20'
+      - '收盘价_主力合约'
+      - '结算价_主力合约'
+      - '持仓量_主力合约'
+      - '成交量_主力合约'
+      - '最高价_主力合约'
+      - '持仓量_次大合约'
+      - '成交量_次大合约'
+      - '最高价_次大合约'
+      - '收盘价_第三大合约'
+      - '成交量_第三大合约'
+      - '最高价_第三大合约'
+      - '最低价_第三大合约'
+      - 'day'
+      - 'month'
+      - '欧元区:HICP(调和CPI):当月同比_M_lag_1'
+      - 'OPEC：原油：产量：阿联酋（月）_M_lag_4'
+      - '中国:制造业PMI_M_lag_4'
+
+      - 'spread_close_sub_vs_third'
+      - 'close_rolling_std_20'
+
+## brent T_20
+brent_T_20_pipeline:
+  <<: *base_global_pipeline
+  update_used_fields:
+    use_fields:
+      - 'T_5'
+      - 'T_10'
+      - 'T_20'
+      - '收盘价_主力合约'
+      - '结算价_主力合约'
+      - '持仓量_主力合约'
+      - '成交量_主力合约'
+      - '最高价_主力合约'
+      - '持仓量_次大合约'
+      - '成交量_次大合约'
+      - '最高价_次大合约'
+      - '收盘价_第三大合约'
+      - '成交量_第三大合约'
+      - '最高价_第三大合约'
+      - '最低价_第三大合约'
+      - 'day'
+      - 'month'
+      - '欧元区:HICP(调和CPI):当月同比_M_lag_1'
+      - 'EIA：燃料油渣油：库存（周）_W_lag_8'
+      - '主力成交量变化'
+      - '次主力成交量变化'
+
+      - 'close_rolling_std_40'
+
+## sc T_5
+sc_T_5_pipeline:
+  <<: *base_global_pipeline
+  update_used_fields:
+    use_fields:
+      - 'T_5'
+      - 'T_10'
+      - 'T_20'
+      - '收盘价_主力合约'
+      - '结算价_主力合约'
+      - '持仓量_主力合约'
+      - '成交量_主力合约'
+      - '最高价_主力合约'
+      - '持仓量_次大合约'
+      - '成交量_次大合约'
+      - '最高价_次大合约'
+      - '收盘价_第三大合约'
+      - '成交量_第三大合约'
+      - '最高价_第三大合约'
+      - '最低价_第三大合约'
+      - 'day'
+      - 'month'
+      - 'OPEC：原油：产量：伊朗（月）_M_lag_2'
+      - '中国:房地产开发投资完成额:累计同比_M_lag_4'
+      - '中国:PPI:全部工业品:当月同比_M_lag_1'
+      - '汽油：商业库存：中国（周）_W_lag_7'
+      - 'ICE:IPE:期货持仓数量:生产商/贸易商/加工商/用户空头持仓:原油_W_lag_7'
+      - '柴油：裂解：价差：中国：主营销售公司（日）_D_lag_33'
+      - '主力成交量变化'
+      - '次主力成交量变化'
+
+      - 'ratio_close_sub_vs_third'
+
+## sc T_10
+sc_T_10_pipeline:
+  <<: *base_global_pipeline
+  update_used_fields:
+    use_fields:
+      - 'T_5'
+      - 'T_10'
+      - 'T_20'
+      - '收盘价_主力合约'
+      - '结算价_主力合约'
+      - '持仓量_主力合约'
+      - '成交量_主力合约'
+      - '最高价_主力合约'
+      - '持仓量_次大合约'
+      - '成交量_次大合约'
+      - '最高价_次大合约'
+      - '收盘价_第三大合约'
+      - '成交量_第三大合约'
+      - '最高价_第三大合约'
+      - '最低价_第三大合约'
+      - 'day'
+      - 'month'
+      - '中国:房地产开发投资完成额:累计同比_M_lag_1'
+
+      - 'close_rolling_skew_60'
+
+## sc T_20
+sc_T_20_pipeline:
+  <<: *base_global_pipeline
+  update_used_fields:
+    use_fields:
+      - 'T_5'
+      - 'T_10'
+      - 'T_20'
+      - '收盘价_主力合约'
+      - '结算价_主力合约'
+      - '持仓量_主力合约'
+      - '成交量_主力合约'
+      - '最高价_主力合约'
+      - '持仓量_次大合约'
+      - '成交量_次大合约'
+      - '最高价_次大合约'
+      - '收盘价_第三大合约'
+      - '成交量_第三大合约'
+      - '最高价_第三大合约'
+      - '最低价_第三大合约'
+      - 'day'
+      - 'month'
+      - '美国:CPI:同比_M_lag_1'
+      - 'OPEC：原油：产量：伊朗（月）_M_lag_4'
+      - '中国:M2:同比_M_lag_1'
+
+      - 'close_rolling_std_40'
+      - 'bb_width_20'
+
+## wti T_5
+wti_T_5_pipeline:
+  <<: *base_global_pipeline
+  update_used_fields:
+    use_fields:
+      - 'T_5'
+      - 'T_10'
+      - 'T_20'
+      - '收盘价_主力合约'
+      - '结算价_主力合约'
+      - '持仓量_主力合约'
+      - '成交量_主力合约'
+      - '最高价_主力合约'
+      - '持仓量_次大合约'
+      - '成交量_次大合约'
+      - '最高价_次大合约'
+      - '收盘价_第三大合约'
+      - '成交量_第三大合约'
+      - '最高价_第三大合约'
+      - '最低价_第三大合约'
+      - 'day'
+      - 'month'
+      - '欧元区:HICP(调和CPI):当月同比_M_lag_1'
+      - '主力成交量变化'
+      - '次主力成交量变化'
+
+      - 'close_rolling_min_5'
+      - 'spread_close_sub_vs_third'
+      - 'ratio_close_sub_vs_third'
+
+## wti T_10
+wti_T_10_pipeline:
+  <<: *base_global_pipeline
+  update_used_fields:
+    use_fields:
+      - 'T_5'
+      - 'T_10'
+      - 'T_20'
+      - '收盘价_主力合约'
+      - '结算价_主力合约'
+      - '持仓量_主力合约'
+      - '成交量_主力合约'
+      - '最高价_主力合约'
+      - '持仓量_次大合约'
+      - '成交量_次大合约'
+      - '最高价_次大合约'
+      - '收盘价_第三大合约'
+      - '成交量_第三大合约'
+      - '最高价_第三大合约'
+      - '最低价_第三大合约'
+      - 'day'
+      - 'month'
+      - '欧元区:HICP(调和CPI):当月同比_M_lag_1'
+
+      - 'close_rolling_min_10'
+
+
+## wti T_20
+wti_T_20_pipeline:
+  <<: *base_global_pipeline
+  update_used_fields:
+    use_fields:
+      - 'T_5'
+      - 'T_10'
+      - 'T_20'
+      - '收盘价_主力合约'
+      - '结算价_主力合约'
+      - '持仓量_主力合约'
+      - '成交量_主力合约'
+      - '最高价_主力合约'
+      - '持仓量_次大合约'
+      - '成交量_次大合约'
+      - '最高价_次大合约'
+      - '收盘价_第三大合约'
+      - '成交量_第三大合约'
+      - '最高价_第三大合约'
+      - '最低价_第三大合约'
+      - 'day'
+      - 'month'
+      - '欧元区:HICP(调和CPI):当月同比_M_lag_1'
+      - '原油：常减压：独立炼厂：产能利用率：中国（周）_W_lag_6'
+
 
 # --- 5. 模型训练 ---
 model:
   type: 'xgboost' # 将来可以支持 'lightgbm', 'catboost' 等
   params:
+    booster: 'gbtree' # gbtree, gblinear, dart
     n_estimators: 1000
-    max_depth: 8
-    learning_rate: 0.05
-    subsample: 0.8
+    gamma: 1 # 0, 1, 5, 10
+    max_depth: 8 # 6, 7, 8, 9, 10
+    learning_rate: 0.05 # 0.1, 0.2, 0.3, 0.4, 0.6
+    min_child_weight: 1 # 0.5, 1, 2, 5\
+    subsample: 0.8 # 0.5, 0.6, 0.7, 0.8, 0.9, 1
+    sampling_method: 'uniform' # uniform, gradient_based
+    lambda: 1 # 0 1 2 5
+    grow_policy: 'depthwise' # depthwise, lossguide
+    max_bin: 256 # 64, 128, 256, 512
+    num_parallel_tree: 1 # 1, 2, 3
+    tree_method: 'auto' # auto, exact, approx, hist
     colsample_bytree: 0.8
     objective: 'reg:squarederror'
     eval_metric: 'rmse'
     seed: 42
     n_jobs: -1
-    tree_method: 'hist' # 使用CPU时，可改为 'auto' 或注释掉 device
     device: 'cuda'
-
-# --- 6. 评估 ---
-evaluation:
-  weights:
-    t5: 0.333333
-    t10: 0.333333
-    t20: 0.333333
