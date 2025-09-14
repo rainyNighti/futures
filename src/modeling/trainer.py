@@ -51,5 +51,5 @@ class ModelTrainer:
             X_tr, y_tr,**kwargs
         )
         joblib.dump(model, self.save_model_path)
-        logging.info(f"模型已保存至: {self.save_model_path}")
+        # logging.info(f"模型已保存至: {self.save_model_path}")
         return model

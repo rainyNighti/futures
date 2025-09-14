@@ -204,5 +204,4 @@ PREPROCESSING_FUNCTIONS_GLOBAL: Dict[str, Callable] = {
 
     # 选择模型训练的列
     "update_used_fields": update_used_fields,
-
 }

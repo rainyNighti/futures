@@ -29,9 +29,9 @@ def main(config_path: str, debug: bool, extra_params: str, force_reprocess: bool
     if debug:
         import debugpy;debugpy.listen(("localhost", 5678));print("Waiting for debugger attach...");debugpy.wait_for_client()
 
-    logging.info(f"加载配置 from {config_path}")
+    tqdm.write(f"加载配置 from {config_path}")
     cfg = load_config(config_path, extra_params)
-    logging.info(f"配置加载成功: \n{pformat(cfg)}")
+    tqdm.write(f"配置加载成功: \n{pformat(cfg)}")
     
     # 不需要num seed，使用TimeSeriesSplit
     results = defaultdict(lambda: defaultdict(dict))
@@ -39,10 +39,12 @@ def main(config_path: str, debug: bool, extra_params: str, force_reprocess: bool
         # 数据读取与合并
         cache_file = f"./cache"
         os.makedirs(cache_file, exist_ok=True)
-        cache_file = os.path.join(cache_file, f'{product_name}.pkl')
+        cache_file = os.path.join(cache_file, f'{product_name}.csv')
         if os.path.exists(cache_file) and not force_reprocess:
             logging.info(f"跳过 {product_name} 的缓存文件已存在: {cache_file}")
-            df = pd.read_pickle(cache_file)
+            df = pd.read_csv(cache_file)
+            df['日期'] = pd.to_datetime(df['日期'])
+            df.set_index('日期', inplace=True)
         else:
             dfs = load_data(
                 base_data_dir=cfg.base_data_dir,
@@ -51,7 +53,11 @@ def main(config_path: str, debug: bool, extra_params: str, force_reprocess: bool
             )
             dfs = clean_data(dfs)
             df = preprocess_data(dfs, cfg.preprocess_config)
-            df.to_pickle(cache_file)
+            df.to_csv(cache_file)
+        
+        drop_first_n_days = cfg.get("drop_first_n_days", 0)
+        if drop_first_n_days > 0:
+            df = df.iloc[drop_first_n_days:]
 
         for target_column in cfg.data_loader.target_columns:
             copy_df = df.copy()
@@ -61,7 +67,8 @@ def main(config_path: str, debug: bool, extra_params: str, force_reprocess: bool
             # 数据划分
             copy_df = copy_df.dropna(subset=[target_column])
             y = copy_df[target_column]
-            X = copy_df.drop(columns=cfg.target_columns)
+            drop_cols = [x for x in ['T_5', 'T_10', 'T_20'] if x in copy_df.columns]
+            X = copy_df.drop(columns=drop_cols)  # 删除其他目标列，防止数据泄露
             tscv = TimeSeriesSplit(n_splits=10)     # 一共1607条数据，10折，1折是160条
 
             pps_scores = []
@@ -74,16 +81,81 @@ def main(config_path: str, debug: bool, extra_params: str, force_reprocess: bool
 
                     # 模型训练
                     save_model_path = os.path.join(cfg.model_save_dir, cfg.experiment_name, product_name, str(idx), f'{target_column}.joblib')
-                    trainer = ModelTrainer(model_config=cfg.model, save_model_path=save_model_path)
-                    trainer.train(X_train, y_train, random_state=cfg.get("seed", 42))
+                    if cfg.model.type == "aemlp":
+                        from src.modeling.aemlp import AE_MLP_Model, loss_fn
+                        feat_dim = X_train.shape[1]
+                        target_dim = 1
+                        model = AE_MLP_Model(
+                            feat_dim=feat_dim,
+                            target_dim=target_dim,
+                            ae_hidden=cfg.model.params.ae_hidden,
+                            ae_code=cfg.model.params.ae_code,
+                            mlp_hidden=cfg.model.params.mlp_hidden,
+                            dropout=cfg.model.params.dropout,
+                            noise_std=cfg.model.params.noise_std
+                        )
+                        import torch
+                        import torch.optim as optim
+                        # 转换数据为张量
+                        X_train_tensor = torch.tensor(X_train.values, dtype=torch.float32)
+                        x_mean, x_std = X_train_tensor.mean(0), X_train_tensor.std(0)
+                        X_train_tensor = (X_train_tensor - x_mean) / (x_std + 1e-6)  # 标准化
+                        y_train_tensor = torch.tensor(y_train.values, dtype=torch.float32).view(-1, 1)
+                        y_mean, y_std = y_train_tensor.mean(0), y_train_tensor.std(0)
+                        y_train_tensor = (y_train_tensor - y_mean) / (y_std + 1e-6)  # 标准化
+                        X_test_tensor = torch.tensor(X_test.values, dtype=torch.float32)
+                        X_test_tensor = (X_test_tensor - x_mean) / (x_std + 1e-6)  # 标准化
+                        optimizer = optim.Adam(model.parameters(), lr=cfg.model.params.learning_rate)
+                        # 训练模型
+                        model.train()
+                        best_pps = -np.inf
+                        final_pps, final_r2 = -np.inf, -np.inf
+                        for epoch in range(cfg.model.params.recon_epochs + cfg.model.params.mlp_epochs):
+                            if epoch < cfg.model.params.recon_epochs:
+                                alpha = 1.0  # 只训练自编码器部分
+                            else:
+                                alpha = 0.0  # 只训练MLP部分
+                            optimizer.zero_grad()
+                            out, recon = model(X_train_tensor, y_train_tensor)
+                            loss, bce = loss_fn(out, y_train_tensor, recon, X_train_tensor, alpha=alpha)
+                            loss.backward()
+                            optimizer.step()
+                            # 模型推理
+                            model.eval()
+                            with torch.no_grad():
+                                y_pred, _ = model(X_test_tensor, is_inference=True)
+                            y_pred = (y_pred * (y_std + 1e-6) + y_mean).numpy().squeeze()
+                            y_test_np = y_test.values
+                            pps = calculate_pps(y_test_np, y_pred)
+                            r2 = r2_score(y_test_np, y_pred)
+                            if epoch < cfg.model.params.recon_epochs:
+                                tqdm.write(f"Recon loss: {loss.item():.4f}, BCE: {bce.item():.4f}, PPS: {pps:.4f}, R2: {r2:.4f} at epoch {epoch+1}/{cfg.model.params.recon_epochs}")
+                            else:
+                                tqdm.write(f"MLP loss: {loss.item():.4f}, BCE: {bce.item():.4f}, PPS: {pps:.4f}, R2: {r2:.4f} at epoch {epoch+1-cfg.model.params.recon_epochs}/{cfg.model.params.mlp_epochs}")
+                                if pps > best_pps:
+                                    best_pps = pps
+                                    final_pps, final_r2 = pps, r2
+                                    # 保存模型
+                                    os.makedirs(os.path.dirname(save_model_path), exist_ok=True)
+                                    torch.save(model.state_dict(), save_model_path)
+                                else:
+                                    tqdm.write("Early stopping as PPS did not improve.")
+                                    break
+                            model.train()
+                            
+                        pps_scores.append(final_pps)
+                        r2_scores.append(final_r2)
+                    else:
+                        trainer = ModelTrainer(model_config=cfg.model, save_model_path=save_model_path)
+                        trainer.train(X_train, y_train, random_state=cfg.get("seed", 42))
 
-                    # 模型推理
-                    predictor = Predictor(save_model_path)
-                    y_pred = predictor.predict(X_test)
+                        # 模型推理
+                        predictor = Predictor(save_model_path)
+                        y_pred = predictor.predict(X_test)
                     
-                    # 7 性能评估
-                    pps_scores.append(calculate_pps(y_test, y_pred))
-                    r2_scores.append(r2_score(y_test, y_pred))
+                        # 7 性能评估
+                        pps_scores.append(calculate_pps(y_test, y_pred))
+                        r2_scores.append(r2_score(y_test, y_pred))
 
             results[product_name][target_column] = {
                 'pps': np.mean(pps_scores),
@@ -91,7 +163,7 @@ def main(config_path: str, debug: bool, extra_params: str, force_reprocess: bool
             }
             
     # 结果汇总与平均
-    logging.info("\n--- 评测结果 ---")
+    tqdm.write("\n--- 评测结果 ---")
     copy_dict = deepcopy(results)
     for target_column in cfg.data_loader.target_columns:
         total_score = 0

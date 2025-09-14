@@ -7,7 +7,7 @@ def convert_str_to_types(value: str):
         return int(value)
     try:
         float_value = float(value)
-        if '.' in value:
+        if '.' in value or 'e' in value.lower():
             return float_value
         return int(float_value)
     except ValueError:
@@ -16,6 +16,8 @@ def convert_str_to_types(value: str):
         return True
     if value.lower() == 'false':
         return False
+    if value == "{}":
+        return {}
     if value.startswith('[') and value.endswith(']'):
         # 解析列表
         list_items = value[1:-1].split(',')
