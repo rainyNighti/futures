@@ -18,7 +18,7 @@ preprocess_config:
 base_global_pipeline: &base_global_pipeline
   # 魔法列处理
   - type: "add_date_info"
-  - type: "handle_missing_values_for_oil_data"
+
   # 使用的列
   - type: "update_used_fields"
     use_fields:
@@ -46,13 +46,10 @@ base_global_pipeline: &base_global_pipeline
       - '成交量_第三大合约'
       - '最高价_第三大合约'
       - '最低价_第三大合约'
-      - 'year'
       - 'month'
-      - 'day'
 
-  # # 缺失值处理
-  # - type: "fill_with_stat"
-  #   method: "mean"
+  # 缺失值处理
+  - type: "handle_missing_values_for_oil_data"
     
 # --- 1. 全局与路径设置 ---
 # 提交时修改为 /app/input/
