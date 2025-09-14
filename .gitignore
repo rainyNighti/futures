@@ -153,4 +153,4 @@ temp.py
 saved_models
 run_xie.sh
 
-cache/*
+cache
