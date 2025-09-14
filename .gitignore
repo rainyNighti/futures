@@ -151,3 +151,4 @@ skyseg.onnx
 temp.py
 .vscode
 saved_models
+run_xie.sh

@@ -18,6 +18,11 @@ def print_pretty_results(results: Dict[str, Dict[str, float]], final_score: floa
     if 'overall' not in results:
         logging.error("错误：结果字典中未找到 'overall' 项。")
         return
+    for k, v in results.items():  # <-- 使用 .items()
+        for k1, v1 in v.items(): # <-- 这里也需要 .items()
+            # 检查 v1 是否为字典并且包含 'pps' 键
+            if isinstance(v1, dict) and 'pps' in v1:
+                v[k1] = v1['pps'] # 用 'pps' 的值替换原来的字典
 
     # 1. 提取所有指标名称和产品名称（不包括 'overall'）
     target_columns = list(results['overall'].keys())

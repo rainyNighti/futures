@@ -5,11 +5,11 @@ import numpy as np
 def merge_with_lags_multi_freq(base_df: pd.DataFrame, 
                                df_to_merge: pd.DataFrame, 
                                freq_map: Dict[str, str], 
-                               n_lags_m: int = -1, 
-                               n_lags_w: int = -1, 
-                               n_lags_d: int = -1,
-                               n_lags_q: int = -1, 
-                               n_lags_y: int = -1):
+                               n_lags_m: int = 4,      # 这里都默认提取1年的数据
+                               n_lags_w: int = 8, 
+                               n_lags_d: int = 60,
+                               n_lags_q: int = 2, 
+                               n_lags_y: int = 2):
 
     """
     将一个时间序列DataFrame（df_to_merge）中的数据按不同的时间频率（年、季、月、周、日）

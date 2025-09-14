@@ -1,5 +1,6 @@
 import pandas as pd
 from typing import Dict, List, Callable
+from copy import deepcopy
 
 from .processors.trade_processor import PREPROCESSING_FUNCTIONS_TRADE
 from .processors.supply_processor import FREQUENCY_MAP_SUPPLY, PREPROCESSING_FUNCTIONS_SUPPLY
@@ -13,12 +14,12 @@ from .global_processors import PREPROCESSING_FUNCTIONS_GLOBAL
 from src.utils.processor import merge_with_lags_multi_freq
 
 _TABLE_PROCESSORS = {
-    '基本面数据_供应': (FREQUENCY_MAP_SUPPLY, PREPROCESSING_FUNCTIONS_SUPPLY, 'supply_pipeline'),
-    '基本面数据_宏观': (FREQUENCY_MAP_MACRO, PREPROCESSING_FUNCTIONS_MACRO, 'macro_pipeline'),
-    '基本面数据_基金持仓': (FREQUENCY_MAP_FUND_HOLDING, PREPROCESSING_FUNCTIONS_FUND_HOLDING, 'fund_holding_pipeline'),
-    '基本面数据_库存': (FREQUENCY_MAP_FUND_INVENTORY, PREPROCESSING_FUNCTIONS_FUND_INVENTORY, 'inventory_pipeline'),
-    '基本面数据_利润': (FREQUENCY_MAP_PROFIT, PREPROCESSING_FUNCTIONS_PROFIT, 'profit_pipeline'),
-    '基本面数据_需求': (FREQUENCY_MAP_DEMAND, PREPROCESSING_FUNCTIONS_DEMAND, 'demand_pipeline'),
+    '基本面数据_供应': FREQUENCY_MAP_SUPPLY,
+    '基本面数据_宏观': FREQUENCY_MAP_MACRO,
+    '基本面数据_基金持仓': FREQUENCY_MAP_FUND_HOLDING,
+    '基本面数据_库存': FREQUENCY_MAP_FUND_INVENTORY,
+    '基本面数据_利润': FREQUENCY_MAP_PROFIT,
+    '基本面数据_需求': FREQUENCY_MAP_DEMAND,
 }
 
 def _process_data(
@@ -44,48 +45,44 @@ def _process_data(
             processed_df = processing_functions[_type](processed_df, **params)
     return processed_df
 
-def _process_fundamental_data(
-    base_df: pd.DataFrame, 
-    df_to_merge: pd.DataFrame,
-    frequency_map: Dict[str, str],
-    pipeline_config: List[Dict], 
-    processing_functions: Dict[str, Callable],
-) -> pd.DataFrame:
-    """
-        base_df: 总表数据
-        df_to_merge: 待合并的新表数据
-        frequency_map: 记录fundamental的列数据的更新频率
-    """
-    merge_config = pipeline_config.pop(0)   # 第0个约定为合并函数
-    processed_df = merge_with_lags_multi_freq(base_df.copy(), df_to_merge.copy(), frequency_map, **merge_config)
-    return _process_data(processed_df, pipeline_config, processing_functions)
-
-
-def execute_preprocessing_pipeline(
-    raw_dfs: Dict[str, pd.DataFrame], 
+def feature_engineering_pipeline(
+    df: pd.DataFrame, 
     pipeline_config: Dict, 
-    target_column: str
 ) -> pd.DataFrame:
     """
-    根据配置动态执行预处理流程。
+    根据配置动态执行特征工程流程。
     """
-    config = pipeline_config.copy()
+    copy_df = df.copy()
+    config = deepcopy(pipeline_config)
+
+    all_functions = {
+        ** PREPROCESSING_FUNCTIONS_SUPPLY,
+        ** PREPROCESSING_FUNCTIONS_MACRO,
+        ** PREPROCESSING_FUNCTIONS_FUND_HOLDING,
+        ** PREPROCESSING_FUNCTIONS_FUND_INVENTORY,
+        ** PREPROCESSING_FUNCTIONS_PROFIT,
+        ** PREPROCESSING_FUNCTIONS_DEMAND,
+        ** PREPROCESSING_FUNCTIONS_GLOBAL,
+    }
+
+    # 3 全局数据处理
+    processed_df = _process_data(copy_df, config, all_functions)
+    return processed_df
+
+
+def preprocess_data(
+    raw_dfs: Dict[str, pd.DataFrame], 
+    preprocess_config: Dict, 
+):
+    config = deepcopy(preprocess_config)
 
     # 1 处理 交易数据
     trade_df_raw = raw_dfs.pop('trade')
-    processed_df = _process_data(trade_df_raw, config.trade_pipeline, PREPROCESSING_FUNCTIONS_TRADE)
+    processed_df = _process_data(trade_df_raw, config.trade, PREPROCESSING_FUNCTIONS_TRADE)
 
-    # 2 逐个处理 & 合并 基本数据
+    # 2 合并 基本数据
     for df_name, df_data in raw_dfs.items():
-        frequency_map, processing_functions, functions_name = _TABLE_PROCESSORS[df_name]
-        processed_df = _process_fundamental_data(
-            base_df=processed_df, 
-            df_to_merge=df_data,
-            frequency_map=frequency_map,
-            pipeline_config=pipeline_config[functions_name],
-            processing_functions=processing_functions,
-        )
+        frequency_map = _TABLE_PROCESSORS[df_name]
+        processed_df = merge_with_lags_multi_freq(processed_df.copy(), df_data.copy(), frequency_map)
 
-    # 3 全局数据处理
-    processed_df = _process_data(processed_df, config.global_pipeline, PREPROCESSING_FUNCTIONS_GLOBAL)
     return processed_df

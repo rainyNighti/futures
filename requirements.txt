@@ -12,3 +12,4 @@ catboost==1.2.8
 lightgbm==4.6.0
 tqdm==4.67.1
 numpy==2.2.6
+shap==0.48.0

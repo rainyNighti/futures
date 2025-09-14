@@ -8,54 +8,57 @@ target_columns: &target_columns
 force_reprocess: false
 
 # 定义要执行的预处理步骤及其顺序
-base_preprocessing_pipeline: &base_preprocessing_pipeline
-  trade_pipeline:
+preprocess_config:
+  trade:
     - type: 'aggregate_major_contracts' # 函数名
     - type: 'add_historical_features' 
-      n_lags_d: 20  # 使用历史20天的数据
     - type: 'create_target_feature'
       source_column: '收盘价_主力合约'
 
-  # 约定fundamental的第0个函数为：合并函数
-  supply_pipeline:
-    - n_lags_m: 12  # 使用历史12个月的数据
-      n_lags_w: 20  # 使用历史20周
+base_global_pipeline: &base_global_pipeline
+  # 魔法列处理
+  - type: "add_date_info"
+  - type: "handle_missing_values_for_oil_data"
+  # 使用的列
+  - type: "update_used_fields"
+    use_fields:
+      - 'T_5'
+      - 'T_10'
+      - 'T_20'
+      - '开盘价_主力合约'
+      - '收盘价_主力合约'
+      - '结算价_主力合约'
+      - '持仓量_主力合约'
+      - '成交量_主力合约'
+      - '最高价_主力合约'
+      - '最低价_主力合约'
+      - '开盘价_次大合约'
+      - '收盘价_次大合约'
+      - '结算价_次大合约'
+      - '持仓量_次大合约'
+      - '成交量_次大合约'
+      - '最高价_次大合约'
+      - '最低价_次大合约'
+      - '开盘价_第三大合约'
+      - '收盘价_第三大合约'
+      - '结算价_第三大合约'
+      - '持仓量_第三大合约'
+      - '成交量_第三大合约'
+      - '最高价_第三大合约'
+      - '最低价_第三大合约'
+      - 'year'
+      - 'month'
+      - 'day'
 
-  macro_pipeline:
-    - n_lags_m: 12
-      n_lags_y: 3   # 使用历史3年
-      n_lags_q: 4   # 使用历史4个季度
-
-  fund_holding_pipeline:
-    - n_lags_w: 20
-
-  inventory_pipeline:
-    - n_lags_w: 20
-      n_lags_q: 4
-      n_lags_d: 20  # 使用历史20天
-
-  profit_pipeline:
-    - n_lags_w: 20
-      n_lags_m: 12
-  
-  demand_pipeline:
-    - n_lags_w: 20
-      n_lags_m: 12
-
-  global_pipeline:
-    # 1 魔法列处理
-    - type: "add_date_info"
-
-    # 3 缺失值处理
-    - type: "drop_all_nan_rows_and_y_nan_rows"   # 删除全是NaN的行，以及y是nan的行
-    - type: "fill_with_stat"
-      method: "mean"
-
+  # # 缺失值处理
+  # - type: "fill_with_stat"
+  #   method: "mean"
+    
 # --- 1. 全局与路径设置 ---
 # 提交时修改为 /app/input/
 base_data_dir: 'data/'
 model_save_dir: 'saved_models'
-experiment_name: 'xgboost_baseline'
+experiment_name: 'baseline'
 
 # --- 2. 数据加载设置 ---
 data_loader:
@@ -74,31 +77,31 @@ data_loader:
 
 # --- 3. 特征工程与预处理 ---
 ## brent T_5
-brent_T_5_pipeline: *base_preprocessing_pipeline
+brent_T_5_pipeline: *base_global_pipeline
 
 ## brent T_10
-brent_T_10_pipeline: *base_preprocessing_pipeline
+brent_T_10_pipeline: *base_global_pipeline
 
 ## brent T_20
-brent_T_20_pipeline: *base_preprocessing_pipeline
+brent_T_20_pipeline: *base_global_pipeline
 
 ## sc T_5
-sc_T_5_pipeline: *base_preprocessing_pipeline
+sc_T_5_pipeline: *base_global_pipeline
 
 ## sc T_10
-sc_T_10_pipeline: *base_preprocessing_pipeline
+sc_T_10_pipeline: *base_global_pipeline
 
 ## sc T_20
-sc_T_20_pipeline: *base_preprocessing_pipeline
+sc_T_20_pipeline: *base_global_pipeline
 
 ## wti T_5
-wti_T_5_pipeline: *base_preprocessing_pipeline
+wti_T_5_pipeline: *base_global_pipeline
 
 ## wti T_10
-wti_T_10_pipeline: *base_preprocessing_pipeline
+wti_T_10_pipeline: *base_global_pipeline
 
 ## wti T_20
-wti_T_20_pipeline: *base_preprocessing_pipeline
+wti_T_20_pipeline: *base_global_pipeline
 
 # --- 4. 数据集构建 ---
 test_split_ratio: 0.2

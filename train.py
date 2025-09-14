@@ -1,0 +1,119 @@
+from math import pi
+import os
+import pandas as pd
+import argparse
+import logging
+from pprint import pformat
+from collections import defaultdict
+
+from src.utils.utils import set_random_seed, print_pretty_results, write_score_to_csv
+from src.utils.config import load_config
+from src.data.data_loader import load_data
+from src.data.data_clean import clean_data
+from src.features.preprocessing import feature_engineering_pipeline, preprocess_data
+from src.data.dataset import split_dataset
+from src.modeling.trainer import ModelTrainer
+from src.modeling.predictor import Predictor
+from src.evaluation.evaluator import calculate_pps
+import os
+import numpy as np
+from tqdm import tqdm
+from copy import deepcopy
+from sklearn.model_selection import TimeSeriesSplit
+from sklearn.metrics import r2_score
+
+# 设置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def main(config_path: str, debug: bool, extra_params: str, force_reprocess: bool):  
+    if debug:
+        import debugpy;debugpy.listen(("localhost", 5678));print("Waiting for debugger attach...");debugpy.wait_for_client()
+
+    logging.info(f"加载配置 from {config_path}")
+    cfg = load_config(config_path, extra_params)
+    logging.info(f"配置加载成功: \n{pformat(cfg)}")
+    
+    # 不需要num seed，使用TimeSeriesSplit
+    results = defaultdict(lambda: defaultdict(dict))
+    for product_name, product_path in tqdm(cfg.data_loader.trade_data.items()):
+        # 数据读取与合并
+        cache_file = f"./cache"
+        os.makedirs(cache_file, exist_ok=True)
+        cache_file = os.path.join(cache_file, f'{product_name}.pkl')
+        if os.path.exists(cache_file) and not force_reprocess:
+            logging.info(f"跳过 {product_name} 的缓存文件已存在: {cache_file}")
+            df = pd.read_pickle(cache_file)
+        else:
+            dfs = load_data(
+                base_data_dir=cfg.base_data_dir,
+                trade_data_path=product_path,
+                fundamental_paths=cfg.data_loader.fundamental_data_paths
+            )
+            dfs = clean_data(dfs)
+            df = preprocess_data(dfs, cfg.preprocess_config)
+            df.to_pickle(cache_file)
+
+        for target_column in cfg.data_loader.target_columns:
+            copy_df = df.copy()
+            # 特征工程
+            copy_df = feature_engineering_pipeline(copy_df, cfg[f"{product_name}_{target_column}_pipeline"])
+
+            # 数据划分
+            copy_df = copy_df.dropna(subset=[target_column])
+            y = copy_df[target_column]
+            X = copy_df.drop(columns=cfg.target_columns)
+            tscv = TimeSeriesSplit(n_splits=10)     # 一共1607条数据，10折，1折是160条
+
+            pps_scores = []
+            r2_scores = []
+
+            for idx, (train_index, test_index) in enumerate(tscv.split(X)):
+                if len(train_index) >= 800:   # 至少有800条数据再开始训练 
+                    X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+                    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+                    # 模型训练
+                    save_model_path = os.path.join(cfg.model_save_dir, cfg.experiment_name, product_name, str(idx), f'{target_column}.joblib')
+                    trainer = ModelTrainer(model_config=cfg.model, save_model_path=save_model_path)
+                    trainer.train(X_train, y_train, random_state=cfg.get("seed", 42))
+
+                    # 模型推理
+                    predictor = Predictor(save_model_path)
+                    y_pred = predictor.predict(X_test)
+                    
+                    # 7 性能评估
+                    pps_scores.append(calculate_pps(y_test, y_pred))
+                    r2_scores.append(r2_score(y_test, y_pred))
+
+            results[product_name][target_column] = {
+                'pps': np.mean(pps_scores),
+                'r2': np.mean(r2_scores)
+            }
+            
+    # 结果汇总与平均
+    logging.info("\n--- 评测结果 ---")
+    copy_dict = deepcopy(results)
+    for target_column in cfg.data_loader.target_columns:
+        total_score = 0
+        total_score_r2 = 0
+        for product_name, product_score in results.items():
+            total_score += product_score[target_column]['pps']
+            total_score_r2 += product_score[target_column]['r2']
+        copy_dict['overall'][target_column] = total_score / 3
+        copy_dict['r2'][target_column] = total_score_r2 / 3
+    # 对所有seed的所有字段结果做平均
+    final_score = np.mean(list(copy_dict['overall'].values()))
+    # 打印所有seed的结果和平均结果
+    print_pretty_results(copy_dict, final_score)
+    write_score_to_csv(copy_dict, final_score, os.path.join(cfg.model_save_dir, cfg.experiment_name))
+
+if __name__ == '__main__':
+    set_random_seed(42)
+
+    parser = argparse.ArgumentParser(description="运行机器学习训练流程")
+    parser.add_argument('config', type=str)
+    parser.add_argument('--debug', action='store_true', help='启用调试模式')
+    parser.add_argument('--force_reprocess', action='store_true', help='强制覆盖生成的data cache')
+    parser.add_argument('--extra_params', type=str, help='额外的配置参数，格式为key1=value1,key2=value2')
+    args = parser.parse_args()
+    main(args.config, args.debug, args.extra_params, args.force_reprocess)

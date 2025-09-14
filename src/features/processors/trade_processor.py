@@ -1,7 +1,7 @@
-from typing import Dict, Callable
+from typing import Dict, Callable, List
 import pandas as pd
 
-def add_historical_features(df: pd.DataFrame, n_lags_d: int) -> pd.DataFrame:
+def add_historical_features(df: pd.DataFrame, n_lags_d: int = 60) -> pd.DataFrame:
     """
     为一个DataFrame的每一行添加前 N 帧（行）的数据作为新特征列。
 
@@ -52,15 +52,16 @@ def aggregate_major_contracts(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
 
     return combined_df
 
-def create_target_feature(df: pd.DataFrame, source_column: str, target_column: str) -> pd.DataFrame:
+def create_target_feature(df: pd.DataFrame, source_column: str, target_columns: List[str] = ['T_5', 'T_10', 'T_20']) -> pd.DataFrame:
     """
         为表格添加：对应的y列
-        target_column: ['T_5', 'T_10', 'T_20'] 三者中的一个
+        target_columns: ['T_5', 'T_10', 'T_20']
     """
     df_new = df.copy()
     df_new = df_new.sort_index()
-    index = int(target_column.split('_')[-1])
-    df_new[target_column] = df_new[source_column].shift(-index)
+    for target_column in target_columns:
+        index = int(target_column.split('_')[-1])
+        df_new[target_column] = df_new[source_column].shift(-index)
     return df_new
 
 def add_close_spread(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
