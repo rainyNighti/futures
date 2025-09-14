@@ -43,7 +43,7 @@ def fill_with_stat(df: pd.DataFrame, method: str = 'mean', include_columns: List
     return df_copy
 
 # -- 3. 更新，定制化的填补方法 ---
-def handle_missing_values_for_oil_data(df: pd.DataFrame, nan_threshold: float = 0.7, exclude_columns: List[str] = ['T_5', 'T_10', 'T_20']) -> pd.DataFrame:
+def handle_missing_values_for_oil_data(df: pd.DataFrame, nan_threshold: float = 0.7, exclude_columns: List[str] = ['T_5', 'T_10', 'T_20'], interpolate_method: str = 'linear') -> pd.DataFrame:
     """
     针对原油高维时间序列数据，进行系统性的缺失值处理。
 
@@ -104,7 +104,7 @@ def handle_missing_values_for_oil_data(df: pd.DataFrame, nan_threshold: float = 
     # 对快变量使用interpolate
     if fast_cols:
         # 使用线性插值，并且只从前向后插值
-        processed_df[fast_cols] = processed_df[fast_cols].interpolate(method='linear', limit_direction='forward')
+        processed_df[fast_cols] = processed_df[fast_cols].interpolate(method=interpolate_method, limit_direction='forward')
         # print("步骤3b: 对快变量执行 线性插值(interpolate) 完成。")
 
     # 5. 最终清理：处理数据开头可能存在的NaN

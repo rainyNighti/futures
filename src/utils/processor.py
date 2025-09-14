@@ -6,7 +6,7 @@ def merge_with_lags_multi_freq(base_df: pd.DataFrame,
                                df_to_merge: pd.DataFrame, 
                                freq_map: Dict[str, str], 
                                n_lags_m: int = 4,      # 这里都默认提取1年的数据
-                               n_lags_w: int = 8, 
+                               n_lags_w: int = 20, 
                                n_lags_d: int = 60,
                                n_lags_q: int = 2, 
                                n_lags_y: int = 2):

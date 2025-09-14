@@ -102,13 +102,6 @@ def add_volume_ratio(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
     df["成交量比率"] = df[main] / (df[sub] + 1e-9)
     return df
 
-def add_volume_change(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
-    main = f"成交量_主力合约"
-    sub = f"成交量_次大合约"
-    df["主力成交量变化"] = df[main].diff()
-    df["次主力成交量变化"] = df[sub].diff()
-    return df
-
 def add_volume_direction(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
     close_spread = "收盘价差"
     main_vol = "成交量_主力合约"
@@ -140,22 +133,9 @@ def add_oi_ratio(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
     df["持仓量比率"] = df[main] / (df[sub] + 1e-9)
     return df
 
-def add_intraday_volatility(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
-    main_vol = (df["最高价_主力合约"] - df["最低价_主力合约"]) / (df["开盘价_主力合约"] + 1e-9)
-    sub_vol = (df["最高价_次大合约"] - df["最低价_次大合约"]) / (df["开盘价_次大合约"] + 1e-9)
-    df["主力日内波动率"] = main_vol
-    df["次主力日内波动率"] = sub_vol
-    return df
 
-def add_relative_strength(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
-    main = f"收盘价_主力合约"
-    sub = f"收盘价_次大合约"
-    main_ret = df[main].pct_change()
-    sub_ret = df[sub].pct_change()
-    df["主力收益率"] = main_ret
-    df["次主力收益率"] = sub_ret
-    df["价格相对强弱"] = main_ret - sub_ret
-    return df
+
+
 
 # 注册所有可用的预处理函数
 PREPROCESSING_FUNCTIONS_TRADE: Dict[str, Callable] = {
@@ -167,11 +147,8 @@ PREPROCESSING_FUNCTIONS_TRADE: Dict[str, Callable] = {
     'add_highlow_spread_range': add_highlow_spread_range,
     'add_open_gap_spread': add_open_gap_spread,
     'add_volume_ratio': add_volume_ratio,
-    'add_volume_change': add_volume_change,
     'add_volume_direction': add_volume_direction,
     'add_oi_change': add_oi_change,
     'add_oi_transfer': add_oi_transfer,
     'add_oi_ratio': add_oi_ratio,
-    'add_intraday_volatility': add_intraday_volatility,
-    'add_relative_strength': add_relative_strength
 }

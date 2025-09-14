@@ -1,5 +1,5 @@
 import pandas as pd
-from typing import Dict, List, Callable
+from typing import Dict, List, Callable, Any
 from copy import deepcopy
 
 from .processors.trade_processor import PREPROCESSING_FUNCTIONS_TRADE
@@ -24,7 +24,7 @@ _TABLE_PROCESSORS = {
 
 def _process_data(
     df: pd.DataFrame, 
-    pipeline_config: List[Dict], 
+    pipeline_config: Dict[str, Dict[str, Any]], 
     processing_functions: Dict[str, Callable]
 ) -> pd.DataFrame:
     """
@@ -32,17 +32,15 @@ def _process_data(
 
     Args:
         df (pd.DataFrame): DataFrame.
-        pipeline_config (List[Dict]): 来自配置文件的预处理步骤列表.
-            约定：type表示函数名，其余为函数参数
+        pipeline_config (Dict): 来自配置文件的预处理步骤列表.
+            约定：Dict[function_name, params]
 
     Returns:
         pd.DataFrame: 处理完成的DataFrame.
     """
     processed_df = df.copy()
-    for params in pipeline_config:
-        _type = params.pop('type', None)
-        if _type:
-            processed_df = processing_functions[_type](processed_df, **params)
+    for type, params in pipeline_config.items():
+        processed_df = processing_functions[type](processed_df, **params)
     return processed_df
 
 def feature_engineering_pipeline(
