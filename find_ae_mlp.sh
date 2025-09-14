@@ -27,3 +27,7 @@ for ae_hidden in "${ae_hidden_list[@]}"; do
 done
 
 # final result: best model is hidden 512, code 32, mlp 512, dropout 0.3, noise any, lr 1e-4
+
+# 创建所有列的命令：
+# python train.py configs/base_config.yaml --force_reprocess \
+#     --extra_params experiment_name=test,preprocess_config.trade.add_close_spread={},preprocess_config.trade.add_settle_spread={},preprocess_config.trade.add_highlow_spread_range={},preprocess_config.trade.add_open_gap_spread={},preprocess_config.trade.add_volume_ratio={},preprocess_config.trade.add_volume_direction={},preprocess_config.trade.add_oi_change={},preprocess_config.trade.add_oi_transfer={},preprocess_config.trade.add_oi_ratio={}

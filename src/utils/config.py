@@ -16,6 +16,8 @@ def convert_str_to_types(value: str):
         return True
     if value.lower() == 'false':
         return False
+    if value == "{}":
+        return {}
     if value.startswith('[') and value.endswith(']'):
         # 解析列表
         list_items = value[1:-1].split(',')

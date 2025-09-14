@@ -11,9 +11,6 @@ def add_date_info(df: pd.DataFrame) -> pd.DataFrame:
 def update_used_fields(df: pd.DataFrame, use_fields: List[str]) -> pd.DataFrame:
     return df[use_fields]
 
-def del_first_60_days(df: pd.DataFrame) -> pd.DataFrame:
-    return df.iloc[60:]
-
 def add_volume_change(df: pd.DataFrame) -> pd.DataFrame:
     main = f"成交量_主力合约"
     sub = f"成交量_次大合约"
@@ -61,6 +58,4 @@ PREPROCESSING_FUNCTIONS_GLOBAL: Dict[str, Callable] = {
 
     # 选择模型训练的列
     "update_used_fields": update_used_fields,
-
-    "del_first_60_days": del_first_60_days
 }

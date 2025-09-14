@@ -54,6 +54,10 @@ def main(config_path: str, debug: bool, extra_params: str, force_reprocess: bool
             dfs = clean_data(dfs)
             df = preprocess_data(dfs, cfg.preprocess_config)
             df.to_csv(cache_file)
+        
+        drop_first_n_days = cfg.get("drop_first_n_days", 0)
+        if drop_first_n_days > 0:
+            df = df.iloc[drop_first_n_days:]
 
         for target_column in cfg.data_loader.target_columns:
             copy_df = df.copy()
@@ -63,7 +67,8 @@ def main(config_path: str, debug: bool, extra_params: str, force_reprocess: bool
             # 数据划分
             copy_df = copy_df.dropna(subset=[target_column])
             y = copy_df[target_column]
-            X = copy_df.drop(columns=cfg.target_columns)
+            drop_cols = [x for x in ['T_5', 'T_10', 'T_20'] if x in copy_df.columns]
+            X = copy_df.drop(columns=drop_cols)  # 删除其他目标列，防止数据泄露
             tscv = TimeSeriesSplit(n_splits=10)     # 一共1607条数据，10折，1折是160条
 
             pps_scores = []
@@ -83,11 +88,11 @@ def main(config_path: str, debug: bool, extra_params: str, force_reprocess: bool
                         model = AE_MLP_Model(
                             feat_dim=feat_dim,
                             target_dim=target_dim,
-                            ae_hidden=cfg.model.ae_hidden,
-                            ae_code=cfg.model.ae_code,
-                            mlp_hidden=cfg.model.mlp_hidden,
-                            dropout=cfg.model.dropout,
-                            noise_std=cfg.model.noise_std
+                            ae_hidden=cfg.model.params.ae_hidden,
+                            ae_code=cfg.model.params.ae_code,
+                            mlp_hidden=cfg.model.params.mlp_hidden,
+                            dropout=cfg.model.params.dropout,
+                            noise_std=cfg.model.params.noise_std
                         )
                         import torch
                         import torch.optim as optim
@@ -100,13 +105,13 @@ def main(config_path: str, debug: bool, extra_params: str, force_reprocess: bool
                         y_train_tensor = (y_train_tensor - y_mean) / (y_std + 1e-6)  # 标准化
                         X_test_tensor = torch.tensor(X_test.values, dtype=torch.float32)
                         X_test_tensor = (X_test_tensor - x_mean) / (x_std + 1e-6)  # 标准化
-                        optimizer = optim.Adam(model.parameters(), lr=cfg.model.learning_rate)
+                        optimizer = optim.Adam(model.parameters(), lr=cfg.model.params.learning_rate)
                         # 训练模型
                         model.train()
                         best_pps = -np.inf
                         final_pps, final_r2 = -np.inf, -np.inf
-                        for epoch in range(cfg.model.recon_epochs + cfg.model.mlp_epochs):
-                            if epoch < cfg.model.recon_epochs:
+                        for epoch in range(cfg.model.params.recon_epochs + cfg.model.params.mlp_epochs):
+                            if epoch < cfg.model.params.recon_epochs:
                                 alpha = 1.0  # 只训练自编码器部分
                             else:
                                 alpha = 0.0  # 只训练MLP部分
@@ -123,10 +128,10 @@ def main(config_path: str, debug: bool, extra_params: str, force_reprocess: bool
                             y_test_np = y_test.values
                             pps = calculate_pps(y_test_np, y_pred)
                             r2 = r2_score(y_test_np, y_pred)
-                            if epoch < cfg.model.recon_epochs:
-                                tqdm.write(f"Recon loss: {loss.item():.4f}, BCE: {bce.item():.4f}, PPS: {pps:.4f}, R2: {r2:.4f} at epoch {epoch+1}/{cfg.model.recon_epochs}")
+                            if epoch < cfg.model.params.recon_epochs:
+                                tqdm.write(f"Recon loss: {loss.item():.4f}, BCE: {bce.item():.4f}, PPS: {pps:.4f}, R2: {r2:.4f} at epoch {epoch+1}/{cfg.model.params.recon_epochs}")
                             else:
-                                tqdm.write(f"MLP loss: {loss.item():.4f}, BCE: {bce.item():.4f}, PPS: {pps:.4f}, R2: {r2:.4f} at epoch {epoch+1-cfg.model.recon_epochs}/{cfg.model.mlp_epochs}")
+                                tqdm.write(f"MLP loss: {loss.item():.4f}, BCE: {bce.item():.4f}, PPS: {pps:.4f}, R2: {r2:.4f} at epoch {epoch+1-cfg.model.params.recon_epochs}/{cfg.model.params.mlp_epochs}")
                                 if pps > best_pps:
                                     best_pps = pps
                                     final_pps, final_r2 = pps, r2
