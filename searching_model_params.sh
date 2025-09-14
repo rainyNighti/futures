@@ -1,0 +1,1 @@
+python searching_model_params.py configs/base_config.yaml | tee searching.log

@@ -92,9 +92,10 @@ def handle_missing_values_for_oil_data(df: pd.DataFrame, nan_threshold: float = 
         # 规则2: D 后缀或包含行情关键词的为快变量
         elif '_D_' in col or any(keyword in col for keyword in market_data_keywords):
             fast_cols.append(col)
-        # 规则3: 其他未分类的，作为快变量处理更为稳妥
-        else:
-            print(f"对这些变量不进行填充：{col}")
+        elif col in ['T_5', 'T_10', 'T_20']:
+            continue
+        else:           # 规则3: 其他未分类的，作为快变量处理更为稳妥
+            fast_cols.append(col)
 
     # 4. 执行分类填充
     # 对慢变量使用ffill

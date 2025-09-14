@@ -39,10 +39,12 @@ def main(config_path: str, debug: bool, extra_params: str, force_reprocess: bool
         # 数据读取与合并
         cache_file = f"./cache"
         os.makedirs(cache_file, exist_ok=True)
-        cache_file = os.path.join(cache_file, f'{product_name}.pkl')
+        cache_file = os.path.join(cache_file, f'{product_name}.csv')
         if os.path.exists(cache_file) and not force_reprocess:
             logging.info(f"跳过 {product_name} 的缓存文件已存在: {cache_file}")
-            df = pd.read_pickle(cache_file)
+            df = pd.read_csv(cache_file)
+            df['日期'] = pd.to_datetime(df['日期'])
+            df.set_index('日期', inplace=True)
         else:
             dfs = load_data(
                 base_data_dir=cfg.base_data_dir,
@@ -51,7 +53,8 @@ def main(config_path: str, debug: bool, extra_params: str, force_reprocess: bool
             )
             dfs = clean_data(dfs)
             df = preprocess_data(dfs, cfg.preprocess_config)
-            df.to_pickle(cache_file)
+            df.to_csv(cache_file)
+        product_best_params = {}
 
         for target_column in cfg.data_loader.target_columns:
             copy_df = df.copy()
